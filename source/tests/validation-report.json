@@ -1,0 +1,8 @@
+{
+  "unchanged_nonwalking_frames": 16,
+  "walking_frames_before": 4,
+  "walking_frames_after": 8,
+  "final_exe_bytes": 2458112,
+  "windows_runtime_tested": false,
+  "windows_cpu_measured": false
+}

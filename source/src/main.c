@@ -1,12 +1,11 @@
 #include "win32_min.h"
+#include "walk_animation.h"
 
 #define W(x) ((const WCHAR*)L##x)
 #define PET_COUNT 2
-#define FRAME_COUNT 12
 #define SOURCE_W 256
 #define SOURCE_H 256
 #define TIMER_ID 1u
-#define TIMER_MS 50u
 #define WM_TRAY (WM_APP + 1u)
 
 enum PetState {
@@ -30,6 +29,15 @@ typedef struct Pet {
   int surfaceSize;
   int x;
   int y;
+  int previousX;
+  int previousY;
+  BYTE* walkCache;
+  int rendered;
+  int renderedFrame;
+  int renderedDirection;
+  int renderedHearts;
+  int renderedX;
+  int renderedY;
   int baseY;
   int direction;
   int state;
@@ -76,6 +84,8 @@ static BYTE* g_frames[PET_COUNT][FRAME_COUNT];
 static unsigned int g_randomState;
 static int g_fullscreenHidden;
 static int g_tick;
+static unsigned long long g_lastUpdateMs;
+static unsigned int g_clockAccumulator;
 static int g_interactionTicks;
 static int g_interactionCooldown;
 static const int g_sizes[3] = {176, 224, 288};
@@ -205,7 +215,8 @@ static int init_sprites(void) {
   const BYTE* blob = _binary_sprites_rle_start;
   SIZE_T blobSize = (SIZE_T)(_binary_sprites_rle_end - _binary_sprites_rle_start);
   const DWORD expectedPixels = SOURCE_W * SOURCE_H;
-  if (blobSize < 216u || blob[0] != 'M' || blob[1] != 'K' || blob[2] != 'C' || blob[3] != 'T') return 0;
+  const SIZE_T headerSize = 24u + PET_COUNT * FRAME_COUNT * 8u;
+  if (blobSize < headerSize || blob[0] != 'M' || blob[1] != 'K' || blob[2] != 'C' || blob[3] != 'T') return 0;
   if (read_u32(blob + 4) != 1u || read_u32(blob + 8) != SOURCE_W || read_u32(blob + 12) != SOURCE_H) return 0;
   if (read_u32(blob + 16) != PET_COUNT || read_u32(blob + 20) != FRAME_COUNT) return 0;
 
@@ -220,7 +231,7 @@ static int init_sprites(void) {
       DWORD size = read_u32(blob + 28 + index * 8);
       BYTE* dest = g_spriteMemory + (SIZE_T)index * SOURCE_W * SOURCE_H * 4u;
       DWORD pixel = 0;
-      if ((SIZE_T)offset + size > blobSize) return 0;
+      if (offset < headerSize || (SIZE_T)offset + size > blobSize) return 0;
       const BYTE* source = blob + offset;
       const BYTE* end = source + size;
       while (source < end && pixel < expectedPixels) {
@@ -237,7 +248,7 @@ static int init_sprites(void) {
           pixel += run;
         }
       }
-      if (pixel != expectedPixels) return 0;
+      if (pixel != expectedPixels || source != end) return 0;
       g_frames[cat][frame] = dest;
     }
   }
@@ -247,6 +258,33 @@ static int init_sprites(void) {
 static void free_sprites(void) {
   if (g_spriteMemory) CALL(HeapFree)(g_heap, 0, g_spriteMemory);
   g_spriteMemory = NULLPTR;
+}
+
+/* Resize only at a size change for walking. Cache complete body sprites in
+   both directions; no blending, limb deformation or image decoding per tick. */
+static void scale_sprite(BYTE* dest, const BYTE* source, int size, int direction) {
+  for (int y = 0; y < size; y++) {
+    int sy = y * SOURCE_H / size;
+    for (int x = 0; x < size; x++) {
+      int sx = x * SOURCE_W / size;
+      if (direction < 0) sx = SOURCE_W - 1 - sx;
+      mem_copy(dest + ((SIZE_T)y * size + x) * 4u,
+               source + ((SIZE_T)sy * SOURCE_W + sx) * 4u, 4u);
+    }
+  }
+}
+
+static void create_walk_cache(Pet* pet, int size) {
+  SIZE_T frameBytes = (SIZE_T)size * size * 4u;
+  if (pet->walkCache) CALL(HeapFree)(g_heap, 0, pet->walkCache);
+  pet->walkCache = (BYTE*)CALL(HeapAlloc)(g_heap, 0, frameBytes * WALK_FRAME_COUNT * 2u);
+  if (!pet->walkCache) return; /* Fall back to scaling the changed frame only. */
+  for (int direction = 0; direction < 2; direction++) {
+    for (int slot = 0; slot < WALK_FRAME_COUNT; slot++) {
+      scale_sprite(pet->walkCache + (direction * WALK_FRAME_COUNT + slot) * frameBytes,
+                   g_frames[pet->id][walk_frames[slot]], size, direction ? -1 : 1);
+    }
+  }
 }
 
 static int create_pet_surface(Pet* pet, int size) {
@@ -264,6 +302,9 @@ static int create_pet_surface(Pet* pet, int size) {
     CALL(SelectObject)(pet->memdc, pet->oldBitmap);
     CALL(DeleteObject)(pet->bitmap);
     pet->bitmap = NULLPTR;
+    pet->pixels = NULLPTR;
+    pet->surfaceSize = 0;
+    pet->rendered = 0;
   }
   mem_zero(&info, sizeof(info));
   info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -280,10 +321,14 @@ static int create_pet_surface(Pet* pet, int size) {
   pet->oldBitmap = CALL(SelectObject)(pet->memdc, bitmap);
   pet->pixels = (BYTE*)pixels;
   pet->surfaceSize = size;
+  pet->rendered = 0;
+  create_walk_cache(pet, size);
   return 1;
 }
 
 static void destroy_pet_surface(Pet* pet) {
+  if (pet->walkCache) CALL(HeapFree)(g_heap, 0, pet->walkCache);
+  pet->walkCache = NULLPTR;
   if (pet->memdc && pet->bitmap) {
     CALL(SelectObject)(pet->memdc, pet->oldBitmap);
     CALL(DeleteObject)(pet->bitmap);
@@ -325,48 +370,68 @@ static void draw_heart(Pet* pet, int centerX, int topY, int scale, BYTE red, BYT
 }
 
 static void render_pet(Pet* pet) {
-  int size;
-  const BYTE* source;
+  int size, frame, hearts, sameContent;
+  unsigned int remainder = g_clockAccumulator < SIMULATION_MS ? g_clockAccumulator : SIMULATION_MS - 1u;
   POINT destination;
-  POINT sourcePoint;
+  POINT sourcePoint = {0, 0};
   SIZE windowSize;
-  BLENDFUNCTION blend;
-  HDC screen;
+  BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
   if (!pet->hwnd || !pet->visible || g_fullscreenHidden) return;
   size = g_sizes[g_settings.sizeIndex];
   if (!pet->pixels || pet->surfaceSize != size) {
     if (!create_pet_surface(pet, size)) return;
   }
-  mem_zero(pet->pixels, (SIZE_T)size * size * 4u);
-  source = g_frames[pet->id][int_clamp(pet->frame, 0, FRAME_COUNT - 1)];
-  for (int y = 0; y < size; y++) {
-    int sy = y * SOURCE_H / size;
-    for (int x = 0; x < size; x++) {
-      int sx = x * SOURCE_W / size;
-      if (pet->direction < 0) sx = SOURCE_W - 1 - sx;
-      mem_copy(pet->pixels + ((SIZE_T)y * size + x) * 4u,
-               source + ((SIZE_T)sy * SOURCE_W + sx) * 4u, 4u);
-    }
-  }
-  if (pet->loveTicks > 0 || g_interactionTicks > 0) {
-    int scale = size >= 270 ? 2 : 1;
-    draw_heart(pet, size / 2, 8, scale, 255, 92, 156);
-    if (g_interactionTicks > 24) draw_heart(pet, size / 2 + size / 7, 30, 1, 255, 156, 196);
-  }
+  frame = int_clamp(pet->frame, 0, FRAME_COUNT - 1);
   destination.x = pet->x;
   destination.y = pet->y;
-  sourcePoint.x = 0;
-  sourcePoint.y = 0;
-  windowSize.cx = size;
-  windowSize.cy = size;
-  blend.BlendOp = AC_SRC_OVER;
-  blend.BlendFlags = 0;
-  blend.SourceConstantAlpha = 255;
-  blend.AlphaFormat = AC_SRC_ALPHA;
-  screen = CALL(GetDC)(NULLPTR);
-  CALL(UpdateLayeredWindow)(pet->hwnd, screen, &destination, &windowSize,
-                           pet->memdc, &sourcePoint, 0, &blend, ULW_ALPHA);
-  CALL(ReleaseDC)(NULLPTR, screen);
+  if (!pet->dragging && !g_settings.paused && !g_interactionTicks && pet->animTick > 0) {
+    if (pet->state == STATE_WALK || pet->state == STATE_RUN || pet->state == STATE_JUMP) {
+      destination.x = interpolate_position(pet->previousX, pet->x, remainder);
+      destination.y = interpolate_position(pet->previousY, pet->y, remainder);
+    }
+    if (pet->state == STATE_WALK) {
+      frame = walk_frame_at_time((unsigned int)(pet->animTick - 1) * SIMULATION_MS +
+                                 remainder, g_speeds[g_settings.speedIndex]);
+    }
+  }
+  hearts = (pet->loveTicks > 0 || g_interactionTicks > 0 ? 1 : 0) |
+           (g_interactionTicks > 24 ? 2 : 0);
+  sameContent = pet->rendered && pet->renderedFrame == frame &&
+                pet->renderedDirection == pet->direction && pet->renderedHearts == hearts;
+  if (sameContent) {
+    if (pet->renderedX == destination.x && pet->renderedY == destination.y) return;
+    /* Microsoft documents NULL source, size, blend and zero flags for a
+       position-only update; reuse the compositor's existing pixels. */
+    if (CALL(UpdateLayeredWindow)(pet->hwnd, NULLPTR, &destination, NULLPTR,
+                                 NULLPTR, NULLPTR, 0, NULLPTR, 0)) {
+      pet->renderedX = destination.x;
+      pet->renderedY = destination.y;
+    } else pet->rendered = 0;
+    return;
+  }
+  int slot = walk_slot_for_frame(frame);
+  if (slot >= 0 && pet->walkCache) {
+    SIZE_T frameBytes = (SIZE_T)size * size * 4u;
+    int index = slot + (pet->direction < 0 ? WALK_FRAME_COUNT : 0);
+    mem_copy(pet->pixels, pet->walkCache + index * frameBytes, frameBytes);
+  } else {
+    scale_sprite(pet->pixels, g_frames[pet->id][frame], size, pet->direction);
+  }
+  if (hearts & 1) {
+    int scale = size >= 270 ? 2 : 1;
+    draw_heart(pet, size / 2, 8, scale, 255, 92, 156);
+    if (hearts & 2) draw_heart(pet, size / 2 + size / 7, 30, 1, 255, 156, 196);
+  }
+  windowSize.cx = windowSize.cy = size;
+  pet->rendered = CALL(UpdateLayeredWindow)(pet->hwnd, NULLPTR, &destination, &windowSize,
+                                           pet->memdc, &sourcePoint, 0, &blend, ULW_ALPHA) != 0;
+  if (pet->rendered) {
+    pet->renderedFrame = frame;
+    pet->renderedDirection = pet->direction;
+    pet->renderedHearts = hearts;
+    pet->renderedX = destination.x;
+    pet->renderedY = destination.y;
+  }
 }
 
 static void get_work_area(Pet* pet, RECT* area) {
@@ -412,6 +477,10 @@ static void reset_pet_positions(void) {
   g_pets[0].y = g_pets[1].y = area.bottom - size;
   g_pets[0].direction = 1;
   g_pets[1].direction = -1;
+  for (int i = 0; i < PET_COUNT; i++) {
+    g_pets[i].previousX = g_pets[i].x;
+    g_pets[i].previousY = g_pets[i].y;
+  }
   render_pet(&g_pets[0]);
   render_pet(&g_pets[1]);
   save_settings();
@@ -526,9 +595,9 @@ static void update_pet(Pet* pet) {
 
   switch (pet->state) {
     case STATE_WALK:
-      pet->frame = (pet->animTick / 3) & 3;
+      pet->frame = walk_frame_at_time((unsigned int)pet->animTick * SIMULATION_MS, speed);
       pet->x += pet->direction * speed;
-      pet->y = pet->baseY - ((pet->animTick / 3) & 1);
+      pet->y = pet->baseY; /* Body motion is already present in each full-body frame. */
       break;
     case STATE_SIT: pet->frame = 4; pet->y = pet->baseY; break;
     case STATE_SLEEP: pet->frame = 5; pet->y = pet->baseY; break;
@@ -584,7 +653,7 @@ static void maybe_start_interaction(void) {
   }
 }
 
-static void update_all(void) {
+static void update_simulation(void) {
   g_tick++;
   if ((g_tick % 10) == 0) {
     int shouldHide = g_settings.autoHideFullscreen && foreground_is_fullscreen();
@@ -612,6 +681,25 @@ static void update_all(void) {
     update_pet(&g_pets[0]);
     update_pet(&g_pets[1]);
     maybe_start_interaction();
+  }
+}
+
+/* Keep all behavior durations on the original 50 ms clock. A 25 ms presentation
+   timer interpolates motion and displays every 75 ms walk pose at normal speed.
+   Bound catch-up work after long scheduler stalls instead of teleporting cats. */
+static void update_all(void) {
+  unsigned long long now = CALL(GetTickCount64)();
+  unsigned long long elapsed = now - g_lastUpdateMs;
+  g_lastUpdateMs = now;
+  if (elapsed > 250u) elapsed = 250u;
+  g_clockAccumulator += (unsigned int)elapsed;
+  while (g_clockAccumulator >= SIMULATION_MS) {
+    g_clockAccumulator -= SIMULATION_MS;
+    for (int i = 0; i < PET_COUNT; i++) {
+      g_pets[i].previousX = g_pets[i].x;
+      g_pets[i].previousY = g_pets[i].y;
+    }
+    update_simulation();
   }
   render_pet(&g_pets[0]);
   render_pet(&g_pets[1]);
@@ -681,7 +769,7 @@ static void show_context_menu(int x, int y) {
   HMENU sizes = CALL(CreatePopupMenu)();
   HMENU speeds = CALL(CreatePopupMenu)();
   if (!menu || !sizes || !speeds) return;
-  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン"));
+  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン  v1.1.0"));
   CALL(AppendMenuW)(menu, MF_SEPARATOR, 0, NULLPTR);
   append_checked_item(menu, ID_YURI_VISIBLE, W("ゆりちゃんを表示"), g_pets[0].visible);
   append_checked_item(menu, ID_ONY_VISIBLE, W("オニャンコポンを表示"), g_pets[1].visible);
@@ -723,6 +811,8 @@ static void change_size(int newIndex) {
     g_pets[i].y = g_pets[i].baseY;
     create_pet_surface(&g_pets[i], newSize);
     clamp_pet_to_work_area(&g_pets[i]);
+    g_pets[i].previousX = g_pets[i].x;
+    g_pets[i].previousY = g_pets[i].y;
   }
   update_visibility();
 }
@@ -778,7 +868,7 @@ static void add_tray_icon(void) {
   g_tray.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
   g_tray.uCallbackMessage = WM_TRAY;
   g_tray.hIcon = CALL(LoadIconW)(NULLPTR, IDI_APPLICATION);
-  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン"), 128u);
+  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン  v1.1.0"), 128u);
   g_trayAdded = CALL(Shell_NotifyIconW)(NIM_ADD, &g_tray) != 0;
 }
 
@@ -829,6 +919,8 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         pet->x = pet->dragWindowX + dx;
         pet->y = pet->dragWindowY + dy;
         pet->baseY = pet->y;
+        pet->previousX = pet->x;
+        pet->previousY = pet->y;
         render_pet(pet);
       }
       return 0;
@@ -837,6 +929,8 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         pet->dragging = 0;
         CALL(ReleaseCapture)();
         clamp_pet_to_work_area(pet);
+        pet->previousX = pet->x;
+        pet->previousY = pet->y;
         if (!pet->dragMoved) {
           pet->loveTicks = 70;
           pet->state = STATE_PAW;
@@ -872,6 +966,7 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
 static LRESULT MSABI ControllerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
     case WM_CREATE:
+      g_lastUpdateMs = CALL(GetTickCount64)();
       CALL(SetTimer)(hwnd, TIMER_ID, TIMER_MS, NULLPTR);
       return 0;
     case WM_TIMER:
@@ -998,6 +1093,10 @@ __attribute__((noreturn)) void MSABI WinMainCRTStartup(void) {
 
   if (g_pets[0].hwnd && g_pets[1].hwnd) {
     init_pet_positions();
+    for (int i = 0; i < PET_COUNT; i++) {
+      g_pets[i].previousX = g_pets[i].x;
+      g_pets[i].previousY = g_pets[i].y;
+    }
     add_tray_icon();
     update_visibility();
   }

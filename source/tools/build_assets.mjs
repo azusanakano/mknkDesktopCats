@@ -7,9 +7,9 @@ const sharp = process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES, 'sharp'))
   : require('sharp');
 
-const [,, yuriInput, onyankoponInput, outputDir] = process.argv;
-if (!yuriInput || !onyankoponInput || !outputDir) {
-  console.error('usage: node build_assets.mjs <yuri-green.png> <onyankopon-green.png> <output-dir>');
+const [,, yuriInput, onyankoponInput, outputDir, yuriWalkInput, onyankoponWalkInput] = process.argv;
+if (!yuriInput || !onyankoponInput || !outputDir || !yuriWalkInput || !onyankoponWalkInput) {
+  console.error('usage: node build_assets.mjs <yuri-green.png> <onyankopon-green.png> <output-dir> <yuri-walk-8.png> <onyankopon-walk-8.png>');
   process.exit(2);
 }
 
@@ -17,7 +17,9 @@ const FRAME_W = 256;
 const FRAME_H = 256;
 const COLS = 4;
 const ROWS = 3;
-const FRAMES = COLS * ROWS;
+const BASE_FRAMES = COLS * ROWS;
+const FRAMES = 16;
+const WALK_IDS = [0, 12, 1, 13, 2, 14, 3, 15];
 
 fs.mkdirSync(outputDir, { recursive: true });
 const frameDir = path.join(outputDir, 'frames');
@@ -110,9 +112,9 @@ function keepLargestComponentInCell(rgba, sheetWidth, left, top, cellW, cellH) {
   }
 }
 
-function cleanChromaEdges(rgba, width, height, cellW, cellH) {
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
+function cleanChromaEdges(rgba, width, height, cellW, cellH, rows = ROWS, cols = COLS) {
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
       keepLargestComponentInCell(rgba, width, col * cellW, row * cellH, cellW, cellH);
     }
   }
@@ -163,7 +165,19 @@ function encodeTransparentRle(premultipliedBgra) {
   return Buffer.concat(chunks);
 }
 
-async function processSheet(name, inputPath) {
+function bounds(rgba) {
+  let left=FRAME_W, top=FRAME_H, right=-1, bottom=-1;
+  for(let y=0;y<FRAME_H;y++) for(let x=0;x<FRAME_W;x++) {
+    if(rgba[(y*FRAME_W+x)*4+3] > 8) {
+      left=Math.min(left,x); right=Math.max(right,x);
+      top=Math.min(top,y); bottom=Math.max(bottom,y);
+    }
+  }
+  if(right<left || bottom<top) throw new Error('empty sprite');
+  return {left,top,right,bottom};
+}
+
+async function processSheet(name, inputPath, walkPath) {
   const image = sharp(inputPath).removeAlpha();
   const metadata = await image.metadata();
   if (!metadata.width || !metadata.height || metadata.width % COLS !== 0 || metadata.height % ROWS !== 0) {
@@ -176,12 +190,13 @@ async function processSheet(name, inputPath) {
   const cellH = info.height / ROWS;
   cleanChromaEdges(rgba, info.width, info.height, cellW, cellH);
   const encodedFrames = [];
+  const originalWalkingBounds = [];
 
   await sharp(rgba, { raw: { width: info.width, height: info.height, channels: 4 } })
     .png({ compressionLevel: 9, adaptiveFiltering: true })
     .toFile(path.join(outputDir, `${name}_transparent_sheet.png`));
 
-  for (let index = 0; index < FRAMES; index++) {
+  for (let index = 0; index < BASE_FRAMES; index++) {
     const col = index % COLS;
     const row = Math.floor(index / COLS);
     const framePng = await sharp(rgba, { raw: { width: info.width, height: info.height, channels: 4 } })
@@ -193,6 +208,7 @@ async function processSheet(name, inputPath) {
     fs.writeFileSync(pngPath, framePng);
 
     const { data: frameRgba } = await sharp(framePng).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    if (index < 4) originalWalkingBounds.push(bounds(frameRgba));
     const bgra = Buffer.alloc(frameRgba.length);
     for (let p = 0; p < frameRgba.length; p += 4) {
       const a = frameRgba[p + 3];
@@ -203,11 +219,70 @@ async function processSheet(name, inputPath) {
     }
     encodedFrames.push(encodeTransparentRle(bgra));
   }
+  const walkMeta = await sharp(walkPath).metadata();
+  if (Math.abs(walkMeta.width / walkMeta.height - 2) > 0.02) {
+    throw new Error(`${name}: walking sheet must be 4 columns x 2 rows of square cells`);
+  }
+  const {data: walkRgb} = await sharp(walkPath).removeAlpha()
+    .resize(1024, 512, {fit: 'fill', kernel: sharp.kernel.lanczos3}).raw()
+    .toBuffer({resolveWithObject: true});
+  const walkRgba = chromaToRgba(walkRgb, 1024, 512);
+  cleanChromaEdges(walkRgba, 1024, 512, FRAME_W, FRAME_H, 2, 4);
+  const cells = [];
+  for (let slot = 0; slot < 8; slot++) {
+    const pixels = await sharp(walkRgba, {raw: {width: 1024, height: 512, channels: 4}})
+      .extract({left: (slot % 4) * FRAME_W, top: Math.floor(slot / 4) * FRAME_H,
+                width: FRAME_W, height: FRAME_H}).raw().toBuffer();
+    cells.push({pixels, bounds: bounds(pixels)});
+  }
+  // All eight poses share a scale. Align the nose and floor; never stretch
+  // individual limbs or blend two poses. Fur, body and feet remain one image.
+  const median = values => [...values].sort((a, b) => a-b)[Math.floor(values.length / 2)];
+  const targetRight = median(originalWalkingBounds.map(b => b.right));
+  const targetFloor = median(originalWalkingBounds.map(b => b.bottom));
+  const originalWidth = median(originalWalkingBounds.map(b => b.right-b.left+1));
+  const sourceWidth = median(cells.map(c => c.bounds.right-c.bounds.left+1));
+  const scale = Math.min(originalWidth / sourceWidth,
+    ...cells.map(c => Math.min((targetRight - 4)/(c.bounds.right-c.bounds.left+1),
+                               (targetFloor - 4)/(c.bounds.bottom-c.bounds.top+1))));
+  const previewCells = [];
+  const alignment = [];
+  for (let slot = 0; slot < 8; slot++) {
+    const {pixels, bounds: b} = cells[slot];
+    const width = Math.max(1, Math.round((b.right-b.left+1)*scale));
+    const height = Math.max(1, Math.round((b.bottom-b.top+1)*scale));
+    const crop = await sharp(pixels, {raw: {width: FRAME_W, height: FRAME_H, channels: 4}})
+      .extract({left:b.left,top:b.top,width:b.right-b.left+1,height:b.bottom-b.top+1})
+      .resize(width,height,{kernel:sharp.kernel.lanczos3}).png().toBuffer();
+    const png = await sharp({create:{width:FRAME_W,height:FRAME_H,channels:4,
+                          background:{r:0,g:0,b:0,alpha:0}}})
+      .composite([{input:crop,left:targetRight-width+1,top:targetFloor-height+1}])
+      .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
+    fs.writeFileSync(path.join(frameDir, `${name}_${String(WALK_IDS[slot]).padStart(2,'0')}.png`),png);
+    fs.mkdirSync(path.join(outputDir,'walk'),{recursive:true});
+    fs.writeFileSync(path.join(outputDir,'walk',`${name}_walk_${String(slot).padStart(2,'0')}.png`),png);
+    const frameRgba = await sharp(png).ensureAlpha().raw().toBuffer();
+    const bgra = Buffer.alloc(frameRgba.length);
+    for(let p=0;p<frameRgba.length;p+=4){
+      const a=frameRgba[p+3];
+      bgra[p]=Math.round(frameRgba[p+2]*a/255);
+      bgra[p+1]=Math.round(frameRgba[p+1]*a/255);
+      bgra[p+2]=Math.round(frameRgba[p]*a/255);
+      bgra[p+3]=a;
+    }
+    encodedFrames[WALK_IDS[slot]]=encodeTransparentRle(bgra);
+    previewCells.push({input:png,left:(slot%4)*FRAME_W,top:Math.floor(slot/4)*FRAME_H});
+    alignment.push(bounds(frameRgba));
+  }
+  await sharp({create:{width:1024,height:512,channels:4,background:{r:0,g:0,b:0,alpha:0}}})
+    .composite(previewCells).png({compressionLevel:9}).toFile(path.join(outputDir,`${name}_walk_sheet.png`));
+  fs.writeFileSync(path.join(outputDir,`${name}_walk_alignment.json`),JSON.stringify({
+    scale,targetRight,targetFloor,frames:alignment},null,2));
   return encodedFrames;
 }
 
-const yuriFrames = await processSheet('yuri', yuriInput);
-const onyankoponFrames = await processSheet('onyankopon', onyankoponInput);
+const yuriFrames = await processSheet('yuri', yuriInput, yuriWalkInput);
+const onyankoponFrames = await processSheet('onyankopon', onyankoponInput, onyankoponWalkInput);
 const frames = [...yuriFrames, ...onyankoponFrames];
 
 const headerSize = 24 + frames.length * 8;
@@ -234,10 +309,16 @@ fs.writeFileSync(path.join(outputDir, 'asset-report.json'), JSON.stringify({
   height: FRAME_H,
   cats: 2,
   framesPerCat: FRAMES,
+  walkingFramesPerCat: WALK_IDS.length,
+  walkingFrameIds: WALK_IDS,
+  normalWalkCycleMs: 600,
+  normalWalkFrameMs: 75,
+  sourceStrideWasMs: 600,
   uncompressedBytes: 2 * FRAMES * FRAME_W * FRAME_H * 4,
   encodedBytes: blob.length,
   ratio: Number((blob.length / (2 * FRAMES * FRAME_W * FRAME_H * 4)).toFixed(4)),
-  sources: { yuri: path.basename(yuriInput), onyankopon: path.basename(onyankoponInput) }
+  sources: { yuri: path.basename(yuriInput), onyankopon: path.basename(onyankoponInput),
+    yuriWalk: path.basename(yuriWalkInput), onyankoponWalk: path.basename(onyankoponWalkInput) }
 }, null, 2));
 
 console.log(`sprites: ${frames.length} frames, ${blob.length} bytes`);

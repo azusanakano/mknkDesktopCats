@@ -10,7 +10,7 @@ const width = blob.readUInt32LE(8);
 const height = blob.readUInt32LE(12);
 const cats = blob.readUInt32LE(16);
 const frames = blob.readUInt32LE(20);
-if (version !== 1 || width !== 256 || height !== 256 || cats !== 2 || frames !== 12) throw new Error('bad asset header');
+if (version !== 1 || width !== 256 || height !== 256 || cats !== 2 || frames !== 16) throw new Error('bad asset header');
 
 const hashes = new Set();
 const coverages = [];
@@ -28,12 +28,17 @@ for (let index = 0; index < cats * frames; index++) {
     if (tag & 0x80) pixel += run;
     else {
       const bytes = run * 4;
+      if (source + bytes > offset + size) throw new Error(`frame ${index}: truncated pixels`);
       blob.copy(output, pixel * 4, source, source + bytes);
       source += bytes;
       pixel += run;
     }
   }
   if (pixel !== width * height || source !== offset + size) throw new Error(`frame ${index}: incomplete decode`);
+  for (let p = 0; p < output.length; p += 4) {
+    if (output[p] > output[p+3] || output[p+1] > output[p+3] || output[p+2] > output[p+3])
+      throw new Error(`frame ${index}: invalid premultiplied alpha`);
+  }
   let visible = 0;
   for (let p = 3; p < output.length; p += 4) if (output[p] > 8) visible++;
   const coverage = visible / (width * height);
