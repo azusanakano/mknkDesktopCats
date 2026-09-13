@@ -1,0 +1,54 @@
+mknkDesktopCats 1.8.0 — ネコシステム社
+作成日: 2026-09-13
+対象: Windows 10 / 11 x64
+
+成果物
+- mknkDesktopCats.exe: 1,229,312 bytes
+- SHA-256: 5210828cf763e1074d0a5d336b5da1b159f2e9615ba9e4ad52f3fcdc58cca875
+- 画像をEXEに内蔵。実行時に別の画像ファイルや追加ランタイムを要求しない構成。
+- インポートDLL: kernel32.dll, user32.dll, gdi32.dll, shell32.dll, advapi32.dll
+
+素材と再生
+- 添付のPNG2枚、各1024×512、4列×2行、各コマ256×256。
+- ゆりちゃん: 0bf76a9c44b7e02f58e3a2d83c40de963538bf1e03c5196661f9e2f2e954d1a8
+- オニャンコポン: 964d41964b7e778b4803a8ae94d38733edfdb64f56b513e146e7449c888043a0
+- F01→F02→…→F08→F01。中間コマの生成、姿勢変形、コマごとの位置補正なし。
+- 原画PNGのバイト列を維持。画像圧縮によるサイズ削減作業は実施していない。
+- PNGのRGBAを保持し、EXEでは表示用の乗算済みBGRAへ変換して格納。
+- 原画由来の全1,048,576画素を照合。相違0。半透明25,551画素を保持。
+- RLEサイズ1,206,720 bytes。全16枚が異なること、EXE内の同一RLEを確認。
+- 初期位置と呼び戻しは猫ごとに一定の接地座標（242/228）を使用。
+- ゆっくり2.4秒/周、ふつう1.2秒/周、元気0.8秒/周（目標値）。
+- 移動量は表示幅256px換算で48px/周。設定値であり生体の歩幅の実測値ではない。
+- 33msの要求タイマーで位置更新。遅延時もコマを飛ばさず、長い停止分は追い越さない。
+
+合格した検証
+- bash build.sh: Windows x64 GUI EXE生成。
+- bash tests/run_tests.sh: 全項目PASS。
+- Win32構造体レイアウト、PE32+、GUIサブシステム、エントリ、ASLR、NX、インポート確認。
+- 両猫8コマの順序、全速度、8→1のループ、タイマー遅延、速度変更時の位相保持。
+- 全サイズ・両方向の描画キャッシュ画素、位置だけの更新、ハート、停止/非表示/ドラッグ中の再生停止。
+- 小刻みな位置更新、サイズ変更時の足元維持、座標に基づくモニター選択。
+- 原画PNGとコマPNGのRGBA全画素、およびRLEの乗算済みBGRA照合。
+- HTMLの組み込みJavaScript構文、プレビュー時計の遅延時コマ保持と速度変更。
+- 素材プレビュー動画: H.264/yuv420p, 960×400, 30fps, 144フレーム, 4.8秒。全編デコードPASS。
+
+検証の範囲
+- C描画テストのWindows API部分はスタブ。Windowsデスクトップ実行そのものの確認ではない。
+- この環境ではWindows実機での起動、ドラッグ、通知領域、ログイン時自動起動、実CPU使用率は未確認。
+- ブラウザーでのHTML実操作も未確認。プレビュー動画は素材確認用で、Windows画面の録画ではない。
+- 原画の足運びが生体の歩行と完全一致するという評価は行っていない。
+
+互換性
+- EXE名、ウィンドウ識別子、排他名、設定保存先、自動起動値名を維持。
+- 設定: %APPDATA%\mknkDesktopCats\settings.ini
+- 自動起動値名: mknkDesktopCats
+- 小太郎・チャコさん版サブパッケージは取得した既存ファイルを変更せず同梱。
+
+参照したWindows仕様
+UpdateLayeredWindow:
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-updatelayeredwindow
+SetTimer:
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-settimer
+MonitorFromRect:
+https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-monitorfromrect

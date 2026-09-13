@@ -1,0 +1,344 @@
+{
+  "yuri": {
+    "name": "yuri",
+    "source": "yuri_walk_sheet.png",
+    "sha256": "0bf76a9c44b7e02f58e3a2d83c40de963538bf1e03c5196661f9e2f2e954d1a8",
+    "sourceWidth": 1024,
+    "sourceHeight": 512,
+    "columns": 4,
+    "rows": 2,
+    "cellSize": 256,
+    "frames": [
+      {
+        "frame": 1,
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 20254,
+        "partialAlphaPixels": 1717,
+        "bounds": {
+          "minX": 26,
+          "minY": 68,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "11ff650fcf7fcd971fb85871660b6627d58ac2301a2b869233142f552a1f33c5"
+      },
+      {
+        "frame": 2,
+        "crop": {
+          "x": 256,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 18509,
+        "partialAlphaPixels": 1511,
+        "bounds": {
+          "minX": 24,
+          "minY": 70,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "3acaaedaf94346efe1a2c3d4ad8ab1fbeacd2e65c2a219fb0906c5b91762dd3e"
+      },
+      {
+        "frame": 3,
+        "crop": {
+          "x": 512,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 18744,
+        "partialAlphaPixels": 1536,
+        "bounds": {
+          "minX": 21,
+          "minY": 70,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "1931814bb49525e90e308b9862d6e05d1a02a02271d8f627aae77dc74af481a2"
+      },
+      {
+        "frame": 4,
+        "crop": {
+          "x": 768,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 19306,
+        "partialAlphaPixels": 1600,
+        "bounds": {
+          "minX": 21,
+          "minY": 72,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "d1f2774a4deb2869c4096994961fb0fcb42cbcf4cfd7f8707ae50a7cb92b5ece"
+      },
+      {
+        "frame": 5,
+        "crop": {
+          "x": 0,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 19541,
+        "partialAlphaPixels": 1634,
+        "bounds": {
+          "minX": 27,
+          "minY": 73,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "aa410f817e5c3df128aa16d885dd02e6909b3d0091d8306e28c17026e659e51d"
+      },
+      {
+        "frame": 6,
+        "crop": {
+          "x": 256,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 19094,
+        "partialAlphaPixels": 1526,
+        "bounds": {
+          "minX": 23,
+          "minY": 71,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "17025da1459cdc8d8e02462a3092d6dc60c3af201af297491393b985507a1a1d"
+      },
+      {
+        "frame": 7,
+        "crop": {
+          "x": 512,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 19199,
+        "partialAlphaPixels": 1496,
+        "bounds": {
+          "minX": 24,
+          "minY": 72,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "bf4033477626955e4b556a810350745cbf38435ae13e8599b8d764c19583f4eb"
+      },
+      {
+        "frame": 8,
+        "crop": {
+          "x": 768,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 19885,
+        "partialAlphaPixels": 1696,
+        "bounds": {
+          "minX": 25,
+          "minY": 72,
+          "maxX": 251,
+          "maxY": 241
+        },
+        "rgbaSha256": "158ecf2a0f488651103ddcb9445bf3705edad534f9803a7782a3d17af72039a4"
+      }
+    ],
+    "order": "row-major: F01..F08",
+    "perFrameTranslation": false,
+    "poseWarp": false,
+    "interpolation": false,
+    "rgbModified": false,
+    "alphaModified": false,
+    "alphaMethod": "original PNG alpha preserved byte-for-byte",
+    "sourceHasTiming": false,
+    "defaultCycleMs": 1200,
+    "cycleMs": {
+      "slow": 2400,
+      "normal": 1200,
+      "fast": 800
+    },
+    "displayGroundExclusive": 242
+  },
+  "onyankopon": {
+    "name": "onyankopon",
+    "source": "onyankopon_walk_sheet.png",
+    "sha256": "964d41964b7e778b4803a8ae94d38733edfdb64f56b513e146e7449c888043a0",
+    "sourceWidth": 1024,
+    "sourceHeight": 512,
+    "columns": 4,
+    "rows": 2,
+    "cellSize": 256,
+    "frames": [
+      {
+        "frame": 1,
+        "crop": {
+          "x": 0,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 18295,
+        "partialAlphaPixels": 1627,
+        "bounds": {
+          "minX": 11,
+          "minY": 53,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "29699435f658d3bef1119624044da49ce09922967826be883a43454eed579a77"
+      },
+      {
+        "frame": 2,
+        "crop": {
+          "x": 256,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 17762,
+        "partialAlphaPixels": 1628,
+        "bounds": {
+          "minX": 18,
+          "minY": 53,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "ceb45402789c75774fce29786eb5b6848f145047c95819704f14059c09ece3ae"
+      },
+      {
+        "frame": 3,
+        "crop": {
+          "x": 512,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 17867,
+        "partialAlphaPixels": 1614,
+        "bounds": {
+          "minX": 17,
+          "minY": 51,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "efeecba4410d970a9192861cfa62ed7f7f7a64c27c7a927c3fc2b25b8cc65db8"
+      },
+      {
+        "frame": 4,
+        "crop": {
+          "x": 768,
+          "y": 0,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 17658,
+        "partialAlphaPixels": 1617,
+        "bounds": {
+          "minX": 20,
+          "minY": 52,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "2a3f046a4bf8bc6d9d03c1bbf50d93a607ef4d5ffc5b802504e1dd6984ecfc43"
+      },
+      {
+        "frame": 5,
+        "crop": {
+          "x": 0,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 17740,
+        "partialAlphaPixels": 1603,
+        "bounds": {
+          "minX": 16,
+          "minY": 57,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "1fce2ec6d8d7ad6ba23078daa756e3bfd1f8abd160336be3c79dd1ec31b4370b"
+      },
+      {
+        "frame": 6,
+        "crop": {
+          "x": 256,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 17546,
+        "partialAlphaPixels": 1580,
+        "bounds": {
+          "minX": 13,
+          "minY": 52,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "d5d869730e21ca226f78038283a8ebe1fea4813074a2666241adb0b23823a3cd"
+      },
+      {
+        "frame": 7,
+        "crop": {
+          "x": 512,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 17433,
+        "partialAlphaPixels": 1503,
+        "bounds": {
+          "minX": 13,
+          "minY": 55,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "0395f76a168bac2770f44fb18074f59de68eb6476fbd996a53cc21d30804561e"
+      },
+      {
+        "frame": 8,
+        "crop": {
+          "x": 768,
+          "y": 256,
+          "width": 256,
+          "height": 256
+        },
+        "visiblePixels": 18235,
+        "partialAlphaPixels": 1663,
+        "bounds": {
+          "minX": 14,
+          "minY": 55,
+          "maxX": 242,
+          "maxY": 227
+        },
+        "rgbaSha256": "a749fb5d6d3d79e71622e9c4c6c060016c7afa50f317fc5100dc931e02cd7763"
+      }
+    ],
+    "order": "row-major: F01..F08",
+    "perFrameTranslation": false,
+    "poseWarp": false,
+    "interpolation": false,
+    "rgbModified": false,
+    "alphaModified": false,
+    "alphaMethod": "original PNG alpha preserved byte-for-byte",
+    "sourceHasTiming": false,
+    "defaultCycleMs": 1200,
+    "cycleMs": {
+      "slow": 2400,
+      "normal": 1200,
+      "fast": 800
+    },
+    "displayGroundExclusive": 228
+  }
+}

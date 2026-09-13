@@ -89,6 +89,7 @@ typedef struct {
 
 #define CS_DBLCLKS 0x0008u
 #define WS_POPUP 0x80000000u
+#define WS_EX_TRANSPARENT 0x00000020u
 #define WS_EX_TOPMOST 0x00000008u
 #define WS_EX_TOOLWINDOW 0x00000080u
 #define WS_EX_LAYERED 0x00080000u
@@ -103,6 +104,7 @@ typedef struct {
 #define SWP_SHOWWINDOW 0x0040u
 #define HWND_TOPMOST ((HWND)(LONG_PTR)-1)
 
+#define GWL_EXSTYLE (-20)
 #define GWLP_USERDATA (-21)
 #define HTTRANSPARENT (-1)
 #define HTCLIENT 1
@@ -193,6 +195,7 @@ DECL_IMPORT(BOOL, TrackPopupMenu, (HMENU, UINT, int, int, int, HWND, const RECT*
 DECL_IMPORT(BOOL, DestroyMenu, (HMENU));
 DECL_IMPORT(BOOL, GetWindowRect, (HWND, RECT*));
 DECL_IMPORT(HMONITOR, MonitorFromWindow, (HWND, DWORD));
+DECL_IMPORT(HMONITOR, MonitorFromRect, (const RECT*, DWORD));
 DECL_IMPORT(BOOL, GetMonitorInfoW, (HMONITOR, MONITORINFO*));
 DECL_IMPORT(HWND, GetForegroundWindow, (void));
 DECL_IMPORT(HWND, GetShellWindow, (void));

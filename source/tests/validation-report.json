@@ -1,8 +1,167 @@
 {
-  "unchanged_nonwalking_frames": 16,
-  "walking_frames_before": 4,
-  "walking_frames_after": 8,
-  "final_exe_bytes": 2458112,
-  "windows_runtime_tested": false,
-  "windows_cpu_measured": false
+  "result": "PASS",
+  "version": "1.8.0",
+  "cats": [
+    {
+      "name": "yuri",
+      "sourceSha256": "0bf76a9c44b7e02f58e3a2d83c40de963538bf1e03c5196661f9e2f2e954d1a8",
+      "frames": [
+        {
+          "frame": 1,
+          "assetIndex": 0,
+          "visiblePixels": 20254,
+          "partialAlphaPixels": 1717,
+          "rgbaSha256": "11ff650fcf7fcd971fb85871660b6627d58ac2301a2b869233142f552a1f33c5",
+          "premultipliedBgraSha256": "c689b7ae9578a4bba52142664750253f09a6eb3a79388246d4b81f6883946838"
+        },
+        {
+          "frame": 2,
+          "assetIndex": 1,
+          "visiblePixels": 18509,
+          "partialAlphaPixels": 1511,
+          "rgbaSha256": "3acaaedaf94346efe1a2c3d4ad8ab1fbeacd2e65c2a219fb0906c5b91762dd3e",
+          "premultipliedBgraSha256": "60b25b652e05cb46eae9cec77a19e4b17553caa3bec2374ff4202a274abd5798"
+        },
+        {
+          "frame": 3,
+          "assetIndex": 2,
+          "visiblePixels": 18744,
+          "partialAlphaPixels": 1536,
+          "rgbaSha256": "1931814bb49525e90e308b9862d6e05d1a02a02271d8f627aae77dc74af481a2",
+          "premultipliedBgraSha256": "fe98b520cc0e0ebada31280b4582868b18d0c36feb39475be29eab7145797c3b"
+        },
+        {
+          "frame": 4,
+          "assetIndex": 3,
+          "visiblePixels": 19306,
+          "partialAlphaPixels": 1600,
+          "rgbaSha256": "d1f2774a4deb2869c4096994961fb0fcb42cbcf4cfd7f8707ae50a7cb92b5ece",
+          "premultipliedBgraSha256": "0e4ce6c1738528bfcd5232bab5f336a9c95e763e2552a82a020378f77cc950e1"
+        },
+        {
+          "frame": 5,
+          "assetIndex": 4,
+          "visiblePixels": 19541,
+          "partialAlphaPixels": 1634,
+          "rgbaSha256": "aa410f817e5c3df128aa16d885dd02e6909b3d0091d8306e28c17026e659e51d",
+          "premultipliedBgraSha256": "0c385530d68c755b408e71b60b6f822957eadc9ebf1d3f679cefb8baaf7cade3"
+        },
+        {
+          "frame": 6,
+          "assetIndex": 5,
+          "visiblePixels": 19094,
+          "partialAlphaPixels": 1526,
+          "rgbaSha256": "17025da1459cdc8d8e02462a3092d6dc60c3af201af297491393b985507a1a1d",
+          "premultipliedBgraSha256": "c453ab0dd912959c6db0d41524ec90dc27a3747bc29507ffed2110ce00711868"
+        },
+        {
+          "frame": 7,
+          "assetIndex": 6,
+          "visiblePixels": 19199,
+          "partialAlphaPixels": 1496,
+          "rgbaSha256": "bf4033477626955e4b556a810350745cbf38435ae13e8599b8d764c19583f4eb",
+          "premultipliedBgraSha256": "8e0d907c8b3cb40cedb5d79f7d3a1ec6065e7fa30a895776143c202aaa1a2f01"
+        },
+        {
+          "frame": 8,
+          "assetIndex": 7,
+          "visiblePixels": 19885,
+          "partialAlphaPixels": 1696,
+          "rgbaSha256": "158ecf2a0f488651103ddcb9445bf3705edad534f9803a7782a3d17af72039a4",
+          "premultipliedBgraSha256": "0ab8433616e041909bad0f76b8fcb47f3558e42ff5a7a017a4dc799f49c9eb0f"
+        }
+      ]
+    },
+    {
+      "name": "onyankopon",
+      "sourceSha256": "964d41964b7e778b4803a8ae94d38733edfdb64f56b513e146e7449c888043a0",
+      "frames": [
+        {
+          "frame": 1,
+          "assetIndex": 8,
+          "visiblePixels": 18295,
+          "partialAlphaPixels": 1627,
+          "rgbaSha256": "29699435f658d3bef1119624044da49ce09922967826be883a43454eed579a77",
+          "premultipliedBgraSha256": "9cada31fc615696b684adab865440e38f71b0135a4bd0c1df91fe207d561d0a1"
+        },
+        {
+          "frame": 2,
+          "assetIndex": 9,
+          "visiblePixels": 17762,
+          "partialAlphaPixels": 1628,
+          "rgbaSha256": "ceb45402789c75774fce29786eb5b6848f145047c95819704f14059c09ece3ae",
+          "premultipliedBgraSha256": "27eb5d35325b9e3cffaa8140bd136d6e7c20420db6e72587e47f0eb63877fa81"
+        },
+        {
+          "frame": 3,
+          "assetIndex": 10,
+          "visiblePixels": 17867,
+          "partialAlphaPixels": 1614,
+          "rgbaSha256": "efeecba4410d970a9192861cfa62ed7f7f7a64c27c7a927c3fc2b25b8cc65db8",
+          "premultipliedBgraSha256": "534727e76976d0deb4c1a062671953f11f482a85c2e57926aefadf4070f97dfc"
+        },
+        {
+          "frame": 4,
+          "assetIndex": 11,
+          "visiblePixels": 17658,
+          "partialAlphaPixels": 1617,
+          "rgbaSha256": "2a3f046a4bf8bc6d9d03c1bbf50d93a607ef4d5ffc5b802504e1dd6984ecfc43",
+          "premultipliedBgraSha256": "9e7f764dae1cbe9b32022cdf652a696fa0e12d7164967983f9596a35e6adafa9"
+        },
+        {
+          "frame": 5,
+          "assetIndex": 12,
+          "visiblePixels": 17740,
+          "partialAlphaPixels": 1603,
+          "rgbaSha256": "1fce2ec6d8d7ad6ba23078daa756e3bfd1f8abd160336be3c79dd1ec31b4370b",
+          "premultipliedBgraSha256": "7fd9fed245e51cdb195bca2b453ad9d12f64e15bb32cda0ca92f6275a269c20b"
+        },
+        {
+          "frame": 6,
+          "assetIndex": 13,
+          "visiblePixels": 17546,
+          "partialAlphaPixels": 1580,
+          "rgbaSha256": "d5d869730e21ca226f78038283a8ebe1fea4813074a2666241adb0b23823a3cd",
+          "premultipliedBgraSha256": "46a21a024c3f9b4e9af65f3f85457d9746762995cebd9456ab37fd7054e84dbb"
+        },
+        {
+          "frame": 7,
+          "assetIndex": 14,
+          "visiblePixels": 17433,
+          "partialAlphaPixels": 1503,
+          "rgbaSha256": "0395f76a168bac2770f44fb18074f59de68eb6476fbd996a53cc21d30804561e",
+          "premultipliedBgraSha256": "26c849435a0b21056f2880b7f08049446ba1d14388100c6b16c0301b5a0a53bd"
+        },
+        {
+          "frame": 8,
+          "assetIndex": 15,
+          "visiblePixels": 18235,
+          "partialAlphaPixels": 1663,
+          "rgbaSha256": "a749fb5d6d3d79e71622e9c4c6c060016c7afa50f317fc5100dc931e02cd7763",
+          "premultipliedBgraSha256": "5bf11be58a78792601e622483224ff0e2c5aa7cbe7b459be2737f3df254e839c"
+        }
+      ]
+    }
+  ],
+  "allSourcePixelsChecked": 1048576,
+  "exactOriginalRgbaPixels": 1048576,
+  "exactVisibleRgbAtOriginalCoordinates": 297068,
+  "partialAlphaPixels": 25551,
+  "rgbaOrCoordinateMismatches": 0,
+  "sourcePoseWarp": false,
+  "sourceFrameReordering": false,
+  "sourcePerFrameAlignment": false,
+  "embeddedAssetBytesVerified": 1206720,
+  "exeBytes": 1229312,
+  "exeSha256": "5210828cf763e1074d0a5d336b5da1b159f2e9615ba9e4ad52f3fcdc58cca875",
+  "transparency": "original PNG alpha preserved byte-for-byte; embedded display pixels premultiplied BGRA",
+  "originalImageContainsTiming": false,
+  "normalCycleMs": 1200,
+  "cycleMs": {
+    "slow": 2400,
+    "normal": 1200,
+    "fast": 800
+  },
+  "windowsDesktopLaunchTested": false,
+  "windowsCpuMeasured": false
 }

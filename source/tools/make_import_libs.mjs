@@ -22,7 +22,7 @@ const imports = {
     'UpdateLayeredWindow', 'GetDC', 'ReleaseDC', 'SetWindowPos',
     'GetSystemMetrics', 'GetCursorPos', 'SetCapture', 'ReleaseCapture',
     'LoadIconW', 'LoadCursorW', 'CreatePopupMenu', 'AppendMenuW',
-    'TrackPopupMenu', 'DestroyMenu', 'GetWindowRect', 'MonitorFromWindow',
+    'TrackPopupMenu', 'DestroyMenu', 'GetWindowRect', 'MonitorFromWindow', 'MonitorFromRect',
     'GetMonitorInfoW', 'GetForegroundWindow', 'GetShellWindow', 'GetDesktopWindow',
     'IsWindowVisible', 'MessageBoxW',
     'SetProcessDPIAware', 'GetWindowLongPtrW', 'SetWindowLongPtrW',

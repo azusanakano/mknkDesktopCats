@@ -9,10 +9,14 @@ gcc -fshort-wchar -I"$project_dir/src" "$project_dir/tests/layout_test.c" -o "$p
 "$project_dir/build/layout_test"
 gcc -std=gnu11 -Wall -Wextra -I"$project_dir/src" "$project_dir/tests/animation_test.c" -o "$project_dir/build/animation_test"
 "$project_dir/build/animation_test"
+gcc -std=gnu11 -Wall -Wextra -I"$project_dir/src" "$project_dir/tests/reference_test.c" -o "$project_dir/build/reference_test"
+"$project_dir/build/reference_test"
 gcc -std=gnu11 -O2 -fshort-wchar -ffunction-sections -fdata-sections -Wl,--gc-sections \
   -I"$project_dir/src" "$project_dir/tests/render_test.c" -o "$project_dir/build/render_test"
 "$project_dir/build/render_test"
 "$node_bin" "$project_dir/tests/verify_assets.mjs" "$project_dir/build/assets/sprites.rle"
+"$node_bin" "$project_dir/tests/verify_reference.mjs" "$project_dir" "${1:-}"
+cp "$project_dir/build/reference-validation.json" "$project_dir/tests/validation-report.json"
 python3 "$project_dir/tests/verify_pe.py" "$project_dir/dist/mknkDesktopCats.exe"
 
 undefined="$(objdump -p "$project_dir/dist/mknkDesktopCats.exe" | sed -n '/DLL Name:/p' | wc -l)"

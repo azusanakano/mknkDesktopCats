@@ -1,5 +1,6 @@
 #include "win32_min.h"
 #include "walk_animation.h"
+#include "reference_walk.h"
 
 #define W(x) ((const WCHAR*)L##x)
 #define PET_COUNT 2
@@ -51,6 +52,7 @@ typedef struct Pet {
   int dragWindowX;
   int dragWindowY;
   int loveTicks;
+  ReferenceWalk reference;
 } Pet;
 
 typedef struct Settings {
@@ -81,15 +83,15 @@ static WCHAR g_settingsPath[640];
 static Pet g_pets[PET_COUNT];
 static BYTE* g_spriteMemory;
 static BYTE* g_frames[PET_COUNT][FRAME_COUNT];
-static unsigned int g_randomState;
 static int g_fullscreenHidden;
 static int g_tick;
 static unsigned long long g_lastUpdateMs;
 static unsigned int g_clockAccumulator;
-static int g_interactionTicks;
 static int g_interactionCooldown;
 static const int g_sizes[3] = {176, 224, 288};
 static const int g_speeds[3] = {1, 2, 3};
+/* Fixed sheet-wide alpha baseline, never adjusted per animation frame. */
+static const int g_groundBottom[PET_COUNT] = {242, 228};
 
 static LRESULT MSABI ControllerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -114,6 +116,11 @@ static int int_min(int a, int b) { return a < b ? a : b; }
 static int int_max(int a, int b) { return a > b ? a : b; }
 static int int_clamp(int value, int low, int high) {
   return value < low ? low : value > high ? high : value;
+}
+
+static int ground_offset(int petId, int size) {
+  /* Match the exclusive bottom pixel of nearest-neighbor scaled alpha. */
+  return (g_groundBottom[petId] * size + SOURCE_H - 1) / SOURCE_H;
 }
 
 static UINT wide_len(const WCHAR* text) {
@@ -152,10 +159,6 @@ static void int_to_wide(int value, WCHAR* out, UINT capacity) {
   out[p] = 0;
 }
 
-static unsigned int next_random(void) {
-  g_randomState = g_randomState * 1664525u + 1013904223u;
-  return g_randomState;
-}
 
 static DWORD read_u32(const BYTE* p) {
   return (DWORD)p[0] | ((DWORD)p[1] << 8) | ((DWORD)p[2] << 16) | ((DWORD)p[3] << 24);
@@ -371,7 +374,6 @@ static void draw_heart(Pet* pet, int centerX, int topY, int scale, BYTE red, BYT
 
 static void render_pet(Pet* pet) {
   int size, frame, hearts, sameContent;
-  unsigned int remainder = g_clockAccumulator < SIMULATION_MS ? g_clockAccumulator : SIMULATION_MS - 1u;
   POINT destination;
   POINT sourcePoint = {0, 0};
   SIZE windowSize;
@@ -384,18 +386,7 @@ static void render_pet(Pet* pet) {
   frame = int_clamp(pet->frame, 0, FRAME_COUNT - 1);
   destination.x = pet->x;
   destination.y = pet->y;
-  if (!pet->dragging && !g_settings.paused && !g_interactionTicks && pet->animTick > 0) {
-    if (pet->state == STATE_WALK || pet->state == STATE_RUN || pet->state == STATE_JUMP) {
-      destination.x = interpolate_position(pet->previousX, pet->x, remainder);
-      destination.y = interpolate_position(pet->previousY, pet->y, remainder);
-    }
-    if (pet->state == STATE_WALK) {
-      frame = walk_frame_at_time((unsigned int)(pet->animTick - 1) * SIMULATION_MS +
-                                 remainder, g_speeds[g_settings.speedIndex]);
-    }
-  }
-  hearts = (pet->loveTicks > 0 || g_interactionTicks > 0 ? 1 : 0) |
-           (g_interactionTicks > 24 ? 2 : 0);
+  hearts = pet->loveTicks > 0 ? 1 : 0;
   sameContent = pet->rendered && pet->renderedFrame == frame &&
                 pet->renderedDirection == pet->direction && pet->renderedHearts == hearts;
   if (sameContent) {
@@ -436,8 +427,12 @@ static void render_pet(Pet* pet) {
 
 static void get_work_area(Pet* pet, RECT* area) {
   MONITORINFO info;
-  HMONITOR monitor = CALL(MonitorFromWindow)(pet && pet->hwnd ? pet->hwnd : g_controller,
-                                             MONITOR_DEFAULTTONEAREST);
+  HMONITOR monitor;
+  if (pet) {
+    int size = g_sizes[g_settings.sizeIndex];
+    RECT bounds = {pet->x, pet->baseY, pet->x + size, pet->baseY + ground_offset(pet->id, size)};
+    monitor = CALL(MonitorFromRect)(&bounds, MONITOR_DEFAULTTONEAREST);
+  } else monitor = CALL(MonitorFromWindow)(g_controller, MONITOR_DEFAULTTONEAREST);
   mem_zero(&info, sizeof(info));
   info.cbSize = sizeof(info);
   if (monitor && CALL(GetMonitorInfoW)(monitor, &info)) {
@@ -455,7 +450,7 @@ static void clamp_pet_to_work_area(Pet* pet) {
   int size = g_sizes[g_settings.sizeIndex];
   get_work_area(pet, &area);
   pet->x = int_clamp(pet->x, area.left, int_max(area.left, area.right - size));
-  pet->baseY = int_clamp(pet->baseY, area.top, int_max(area.top, area.bottom - size));
+  pet->baseY = int_clamp(pet->baseY, area.top, int_max(area.top, area.bottom - ground_offset(pet->id, size)));
   if (!pet->dragging && pet->state != STATE_JUMP) pet->y = pet->baseY;
 }
 
@@ -473,8 +468,11 @@ static void reset_pet_positions(void) {
   get_work_area(&g_pets[0], &area);
   g_pets[0].x = area.left + int_min(70, int_max(0, (area.right - area.left - size) / 5));
   g_pets[1].x = area.right - size - int_min(70, int_max(0, (area.right - area.left - size) / 5));
-  g_pets[0].baseY = g_pets[1].baseY = area.bottom - size;
-  g_pets[0].y = g_pets[1].y = area.bottom - size;
+  for (int i = 0; i < PET_COUNT; i++) {
+    g_pets[i].x = int_clamp(g_pets[i].x, area.left, int_max(area.left, area.right - size));
+    g_pets[i].baseY = int_max(area.top, area.bottom - ground_offset(i, size));
+    g_pets[i].y = g_pets[i].baseY;
+  }
   g_pets[0].direction = 1;
   g_pets[1].direction = -1;
   for (int i = 0; i < PET_COUNT; i++) {
@@ -495,14 +493,14 @@ static void init_pet_positions(void) {
     g_pets[0].baseY = g_settings.yuriY;
   } else {
     g_pets[0].x = area.left + 70;
-    g_pets[0].baseY = area.bottom - size;
+    g_pets[0].baseY = area.bottom - ground_offset(0, size);
   }
   if (is_saved_position_valid(g_settings.onyankoponX, g_settings.onyankoponY)) {
     g_pets[1].x = g_settings.onyankoponX;
     g_pets[1].baseY = g_settings.onyankoponY;
   } else {
     g_pets[1].x = area.right - size - 70;
-    g_pets[1].baseY = area.bottom - size;
+    g_pets[1].baseY = area.bottom - ground_offset(1, size);
   }
   g_pets[0].y = g_pets[0].baseY;
   g_pets[1].y = g_pets[1].baseY;
@@ -531,6 +529,10 @@ static int foreground_is_fullscreen(void) {
 
 static void update_visibility(void) {
   for (int i = 0; i < PET_COUNT; i++) {
+    if (!g_pets[i].hwnd) continue;
+    LONG_PTR exStyle = CALL(GetWindowLongPtrW)(g_pets[i].hwnd, GWL_EXSTYLE);
+    LONG_PTR targetStyle = g_settings.clickThrough ? exStyle | WS_EX_TRANSPARENT : exStyle & ~((LONG_PTR)WS_EX_TRANSPARENT);
+    if (targetStyle != exStyle) CALL(SetWindowLongPtrW)(g_pets[i].hwnd, GWL_EXSTYLE, targetStyle);
     if (g_pets[i].visible && !g_fullscreenHidden) {
       CALL(ShowWindow)(g_pets[i].hwnd, SW_SHOWNOACTIVATE);
       CALL(SetWindowPos)(g_pets[i].hwnd, HWND_TOPMOST, g_pets[i].x, g_pets[i].y,
@@ -543,96 +545,10 @@ static void update_visibility(void) {
   }
 }
 
-static void choose_next_state(Pet* pet) {
-  unsigned int roll = next_random() % 100u;
-  pet->animTick = 0;
-  pet->y = pet->baseY;
-  if (roll < 46u) {
-    pet->state = STATE_WALK;
-    pet->stateTicks = 100 + (int)(next_random() % 220u);
-    pet->frame = 0;
-  } else if (roll < 61u) {
-    pet->state = STATE_SIT;
-    pet->stateTicks = 45 + (int)(next_random() % 70u);
-    pet->frame = 4;
-  } else if (roll < 72u) {
-    pet->state = STATE_SLEEP;
-    pet->stateTicks = 110 + (int)(next_random() % 150u);
-    pet->frame = 5;
-  } else if (roll < 82u) {
-    pet->state = STATE_STRETCH;
-    pet->stateTicks = 30;
-    pet->frame = 6;
-  } else if (roll < 90u) {
-    pet->state = STATE_PAW;
-    pet->stateTicks = 30;
-    pet->frame = 7;
-  } else if (roll < 95u) {
-    pet->state = STATE_ALERT;
-    pet->stateTicks = 35 + (int)(next_random() % 35u);
-    pet->frame = 9;
-  } else if (roll < 98u) {
-    pet->state = STATE_RUN;
-    pet->stateTicks = 45 + (int)(next_random() % 55u);
-    pet->frame = 10;
-  } else {
-    pet->state = STATE_JUMP;
-    pet->stateTicks = 40;
-    pet->frame = 8;
-  }
-}
-
+/* Poses and translation belong to each cat's reference clock. */
 static void update_pet(Pet* pet) {
-  RECT area;
-  int size = g_sizes[g_settings.sizeIndex];
-  int speed = g_speeds[g_settings.speedIndex];
+  if (!pet->visible || pet->dragging || g_settings.paused) return;
   if (pet->loveTicks > 0) pet->loveTicks--;
-  if (pet->dragging || g_settings.paused) return;
-  if (pet->stateTicks <= 0) choose_next_state(pet);
-  get_work_area(pet, &area);
-  pet->baseY = int_clamp(pet->baseY, area.top, int_max(area.top, area.bottom - size));
-  pet->animTick++;
-
-  switch (pet->state) {
-    case STATE_WALK:
-      pet->frame = walk_frame_at_time((unsigned int)pet->animTick * SIMULATION_MS, speed);
-      pet->x += pet->direction * speed;
-      pet->y = pet->baseY; /* Body motion is already present in each full-body frame. */
-      break;
-    case STATE_SIT: pet->frame = 4; pet->y = pet->baseY; break;
-    case STATE_SLEEP: pet->frame = 5; pet->y = pet->baseY; break;
-    case STATE_STRETCH: pet->frame = 6; pet->y = pet->baseY; break;
-    case STATE_PAW: pet->frame = 7; pet->y = pet->baseY; break;
-    case STATE_ALERT: pet->frame = 9; pet->y = pet->baseY; break;
-    case STATE_RUN:
-      pet->frame = 10 + ((pet->animTick / 2) & 1);
-      pet->x += pet->direction * speed * 2;
-      pet->y = pet->baseY - ((pet->animTick / 2) & 1) * 2;
-      break;
-    case STATE_JUMP: {
-      int phase = 40 - pet->stateTicks;
-      pet->frame = 8;
-      pet->x += pet->direction * speed;
-      pet->y = pet->baseY - phase * (40 - phase) / 5;
-      break;
-    }
-    default: break;
-  }
-
-  if (pet->x <= area.left) {
-    pet->x = area.left;
-    pet->direction = 1;
-    if (pet->state == STATE_WALK || pet->state == STATE_RUN) {
-      pet->state = STATE_ALERT; pet->stateTicks = 24; pet->frame = 9;
-    }
-  } else if (pet->x >= area.right - size) {
-    pet->x = area.right - size;
-    pet->direction = -1;
-    if (pet->state == STATE_WALK || pet->state == STATE_RUN) {
-      pet->state = STATE_ALERT; pet->stateTicks = 24; pet->frame = 9;
-    }
-  }
-  pet->stateTicks--;
 }
 
 static void maybe_start_interaction(void) {
@@ -644,12 +560,9 @@ static void maybe_start_interaction(void) {
       g_settings.paused || g_fullscreenHidden) return;
   if (int_abs((a->x + size / 2) - (b->x + size / 2)) < size * 2 / 3 &&
       int_abs(a->baseY - b->baseY) < size / 3) {
-    g_interactionTicks = 64;
+    /* Keep the reference walk intact when the two cats meet. */
+    a->loveTicks = b->loveTicks = 64;
     g_interactionCooldown = 600;
-    if (a->x < b->x) { a->direction = 1; b->direction = -1; }
-    else { a->direction = -1; b->direction = 1; }
-    a->state = b->state = STATE_ALERT;
-    a->frame = b->frame = 9;
   }
 }
 
@@ -664,29 +577,33 @@ static void update_simulation(void) {
   }
   if (g_fullscreenHidden) return;
 
-  if (g_interactionTicks > 0) {
-    g_interactionTicks--;
-    for (int i = 0; i < PET_COUNT; i++) {
-      if (g_pets[i].loveTicks > 0) g_pets[i].loveTicks--;
-      g_pets[i].state = STATE_ALERT;
-      g_pets[i].frame = 9;
-      g_pets[i].y = g_pets[i].baseY;
-    }
-    if (g_interactionTicks == 0) {
-      g_pets[0].direction = -g_pets[0].direction;
-      g_pets[1].direction = -g_pets[1].direction;
-      g_pets[0].stateTicks = g_pets[1].stateTicks = 0;
-    }
-  } else {
-    update_pet(&g_pets[0]);
-    update_pet(&g_pets[1]);
-    maybe_start_interaction();
-  }
+  update_pet(&g_pets[0]);
+  update_pet(&g_pets[1]);
+  maybe_start_interaction();
 }
 
-/* Keep all behavior durations on the original 50 ms clock. A 25 ms presentation
-   timer interpolates motion and displays every 75 ms walk pose at normal speed.
-   Bound catch-up work after long scheduler stalls instead of teleporting cats. */
+/* Poses keep their source coordinates; continuous window movement shares
+   their clock, with a fixed per-cat floor offset only for placement. */
+static void update_reference_walk(Pet* pet, unsigned int elapsed) {
+  RECT area;
+  if (!pet->visible || pet->dragging || g_settings.paused || g_fullscreenHidden) return;
+  reference_advance(&pet->reference, elapsed, g_speeds[g_settings.speedIndex]);
+  int size = g_sizes[g_settings.sizeIndex];
+  get_work_area(pet, &area);
+  int step = reference_step_pixels(&pet->reference, (unsigned int)size);
+  pet->x += pet->direction * step;
+  int right = int_max(area.left, area.right - size);
+  if (pet->x <= area.left) { pet->x = area.left; pet->direction = 1; }
+  else if (pet->x >= right) { pet->x = right; pet->direction = -1; }
+  pet->baseY = int_clamp(pet->baseY, area.top, int_max(area.top, area.bottom - ground_offset(pet->id, size)));
+  pet->y = pet->baseY;
+  pet->previousX = pet->x; pet->previousY = pet->y;
+  pet->state = STATE_WALK;
+  pet->frame = walk_frames[pet->reference.slot];
+}
+
+/* Hearts/fullscreen checks run at 50 ms. Each cat advances at most one
+   supplied pose per presentation event, even after a scheduler stall. */
 static void update_all(void) {
   unsigned long long now = CALL(GetTickCount64)();
   unsigned long long elapsed = now - g_lastUpdateMs;
@@ -701,6 +618,7 @@ static void update_all(void) {
     }
     update_simulation();
   }
+  for (int i = 0; i < PET_COUNT; i++) update_reference_walk(&g_pets[i], (unsigned int)elapsed);
   render_pet(&g_pets[0]);
   render_pet(&g_pets[1]);
 }
@@ -769,7 +687,8 @@ static void show_context_menu(int x, int y) {
   HMENU sizes = CALL(CreatePopupMenu)();
   HMENU speeds = CALL(CreatePopupMenu)();
   if (!menu || !sizes || !speeds) return;
-  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン  v1.1.0"));
+  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン  v1.8.0"));
+  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ネコシステム社・2匹とも指定8コマ"));
   CALL(AppendMenuW)(menu, MF_SEPARATOR, 0, NULLPTR);
   append_checked_item(menu, ID_YURI_VISIBLE, W("ゆりちゃんを表示"), g_pets[0].visible);
   append_checked_item(menu, ID_ONY_VISIBLE, W("オニャンコポンを表示"), g_pets[1].visible);
@@ -807,7 +726,7 @@ static void change_size(int newIndex) {
   g_settings.sizeIndex = newIndex;
   for (int i = 0; i < PET_COUNT; i++) {
     g_pets[i].x += (oldSize - newSize) / 2;
-    g_pets[i].baseY += oldSize - newSize;
+    g_pets[i].baseY += ground_offset(i, oldSize) - ground_offset(i, newSize);
     g_pets[i].y = g_pets[i].baseY;
     create_pet_surface(&g_pets[i], newSize);
     clamp_pet_to_work_area(&g_pets[i]);
@@ -868,7 +787,7 @@ static void add_tray_icon(void) {
   g_tray.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
   g_tray.uCallbackMessage = WM_TRAY;
   g_tray.hIcon = CALL(LoadIconW)(NULLPTR, IDI_APPLICATION);
-  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン  v1.1.0"), 128u);
+  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン  v1.8.0"), 128u);
   g_trayAdded = CALL(Shell_NotifyIconW)(NIM_ADD, &g_tray) != 0;
 }
 
@@ -933,9 +852,7 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         pet->previousY = pet->y;
         if (!pet->dragMoved) {
           pet->loveTicks = 70;
-          pet->state = STATE_PAW;
-          pet->stateTicks = 30;
-          pet->frame = 7;
+
         }
         save_settings();
         render_pet(pet);
@@ -943,9 +860,6 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
       return 0;
     case WM_LBUTTONDBLCLK:
       pet->loveTicks = 90;
-      pet->state = STATE_JUMP;
-      pet->stateTicks = 40;
-      pet->frame = 8;
       return 0;
     case WM_RBUTTONUP: {
       POINT cursor;
@@ -1040,7 +954,6 @@ __attribute__((noreturn)) void MSABI WinMainCRTStartup(void) {
   MSG message;
   int result;
   g_heap = CALL(GetProcessHeap)();
-  g_randomState = (unsigned int)CALL(GetTickCount64)();
   CALL(SetProcessDPIAware)();
   g_singleInstance = CALL(CreateMutexW)(NULLPTR, FALSE, W("Local\\mknkDesktopCats.Singleton"));
   if (g_singleInstance && CALL(GetLastError)() == ERROR_ALREADY_EXISTS) {

@@ -1,0 +1,19 @@
+{
+  "version": "1.8.0",
+  "width": 256,
+  "height": 256,
+  "cats": 2,
+  "framesPerCat": 8,
+  "walkingFramesPerCat": 8,
+  "frameOrder": "F01..F08",
+  "normalCycleMs": 1200,
+  "cycleMs": {
+    "slow": 2400,
+    "normal": 1200,
+    "fast": 800
+  },
+  "encodedBytes": 1206720,
+  "uncompressedBytes": 4194304,
+  "sourceRgbaPreserved": true,
+  "displayFormat": "premultiplied BGRA"
+}

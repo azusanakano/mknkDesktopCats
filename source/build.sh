@@ -14,11 +14,7 @@ if [[ -n "$node_modules" ]]; then
 fi
 
 "$node_bin" "$project_dir/tools/build_assets.mjs" \
-  "$project_dir/art_source/yuri_green.png" \
-  "$project_dir/art_source/onyankopon_green.png" \
-  "$build_dir/assets" \
-  "$project_dir/art_source/yuri_walk8_green.png" \
-  "$project_dir/art_source/onyankopon_walk8_green.png"
+  "$project_dir/art_source/reference" "$build_dir/assets"
 
 "$node_bin" "$project_dir/tools/make_import_libs.mjs" "$build_dir/imports"
 for dll in kernel32 user32 gdi32 shell32 advapi32; do

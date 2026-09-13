@@ -1,42 +1,23 @@
 #include <assert.h>
 #include <stdio.h>
 #include "walk_animation.h"
-
+#include "reference_walk.h"
 int main(void) {
-  const int expected[8] = {0, 12, 1, 13, 2, 14, 3, 15};
-  for (int speed = 1; speed <= 3; speed++) {
-    int dwell = 150 / speed;
-    for (int cycle = 0; cycle < 3; cycle++) {
-      for (int slot = 0; slot < 8; slot++) {
-        unsigned int start = (unsigned int)(cycle * 8 + slot) * dwell;
-        assert(walk_frame_at_time(start, speed) == expected[slot]);
-        assert(walk_frame_at_time(start + dwell - 1, speed) == expected[slot]);
-        assert(walk_slot_for_frame(expected[slot]) == slot);
-      }
+  for(int speed=1;speed<=3;speed++) {
+    ReferenceWalk cats[2]={{0},{0}};
+    int reached[2][8]={{0}};
+    for(int event=0;event<1000;event++) for(int cat=0;cat<2;cat++) {
+      int previous=cats[cat].slot;
+      reference_advance(&cats[cat],TIMER_MS,speed);
+      reference_step_pixels(&cats[cat], 224);
+      int current=cats[cat].slot;
+      assert(current==previous || current==(previous+1)%8);
+      assert(walk_frames[current]==current && walk_slot_for_frame(current)==current);
+      reached[cat][current]++;
     }
-    /* The actual 25 ms presentation cadence visits all eight poses evenly. */
-    int counts[8] = {0};
-    for (unsigned int t = 0; t < (unsigned int)(8 * dwell); t += TIMER_MS)
-      counts[walk_slot_for_frame(walk_frame_at_time(t, speed))]++;
-    for (int i = 0; i < 8; i++) assert(counts[i] == dwell / (int)TIMER_MS);
+    for(int cat=0;cat<2;cat++) for(int n=0;n<8;n++) assert(reached[cat][n]);
   }
-  for (int frame = 4; frame <= 11; frame++) assert(walk_slot_for_frame(frame) == -1);
-  assert(walk_slot_for_frame(-1) == -1 && walk_slot_for_frame(16) == -1);
-  /* Interpolation must be monotonic in both directions, including negative
-     monitor coordinates, without accelerating the original movement. */
-  for (int direction = -1; direction <= 1; direction += 2) {
-    for (int speed = 1; speed <= 3; speed++) {
-      int last = -500;
-      for (unsigned int t = 0; t < SIMULATION_MS; t++) {
-        int x = interpolate_position(-500, -500 + direction * speed, t);
-        assert(direction * (x - last) >= 0);
-        assert(direction * (x + 500) <= speed);
-        last = x;
-      }
-      assert(interpolate_position(-500, -500 + direction * speed, SIMULATION_MS) ==
-             -500 + direction * speed);
-    }
-  }
-  puts("animation: 8 distinct poses, uniform timing at all speeds, seamless wrap, monotonic movement passed");
+  assert(walk_slot_for_frame(-1)==-1 && walk_slot_for_frame(8)==-1);
+  puts("animation: both cats reach every F01..F08 pose in order at all speeds PASS");
   return 0;
 }

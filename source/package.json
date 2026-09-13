@@ -1,0 +1,13 @@
+{
+  "name": "mknk-desktop-cats-build",
+  "private": true,
+  "version": "1.8.0",
+  "type": "module",
+  "scripts": {
+    "build": "bash build.sh",
+    "test": "bash tests/run_tests.sh"
+  },
+  "dependencies": {
+    "sharp": "0.35.4"
+  }
+}
