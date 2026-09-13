@@ -1,7 +1,7 @@
 #ifndef MKNK_REFERENCE_WALK_H
 #define MKNK_REFERENCE_WALK_H
 
-/* The supplied PNG has no durations. Normal playback is 8 full-body
+/* The supplied JPEG has no durations. Normal playback is 8 full-body
    images / 1.2 seconds. Speed changes only the time spent on each image. */
 #define REFERENCE_FRAME_UNITS 300u
 #define REFERENCE_FRAME_COUNT 8u

@@ -4,8 +4,8 @@
 
 #define W(x) ((const WCHAR*)L##x)
 #define PET_COUNT 2
-#define SOURCE_W 256
-#define SOURCE_H 256
+#define SOURCE_W 384
+#define SOURCE_H 384
 #define TIMER_ID 1u
 #define WM_TRAY (WM_APP + 1u)
 
@@ -91,7 +91,7 @@ static int g_interactionCooldown;
 static const int g_sizes[3] = {176, 224, 288};
 static const int g_speeds[3] = {1, 2, 3};
 /* Fixed sheet-wide alpha baseline, never adjusted per animation frame. */
-static const int g_groundBottom[PET_COUNT] = {242, 228};
+static const int g_groundBottom[PET_COUNT] = {364, 343};
 
 static LRESULT MSABI ControllerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -687,7 +687,7 @@ static void show_context_menu(int x, int y) {
   HMENU sizes = CALL(CreatePopupMenu)();
   HMENU speeds = CALL(CreatePopupMenu)();
   if (!menu || !sizes || !speeds) return;
-  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン  v1.8.0"));
+  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン  v1.8.1"));
   CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ネコシステム社・2匹とも指定8コマ"));
   CALL(AppendMenuW)(menu, MF_SEPARATOR, 0, NULLPTR);
   append_checked_item(menu, ID_YURI_VISIBLE, W("ゆりちゃんを表示"), g_pets[0].visible);
@@ -787,7 +787,7 @@ static void add_tray_icon(void) {
   g_tray.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
   g_tray.uCallbackMessage = WM_TRAY;
   g_tray.hIcon = CALL(LoadIconW)(NULLPTR, IDI_APPLICATION);
-  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン  v1.8.0"), 128u);
+  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン  v1.8.1"), 128u);
   g_trayAdded = CALL(Shell_NotifyIconW)(NIM_ADD, &g_tray) != 0;
 }
 

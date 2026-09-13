@@ -1,7 +1,7 @@
 {
-  "version": "1.8.0",
-  "width": 256,
-  "height": 256,
+  "version": "1.8.1",
+  "width": 384,
+  "height": 384,
   "cats": 2,
   "framesPerCat": 8,
   "walkingFramesPerCat": 8,
@@ -12,8 +12,9 @@
     "normal": 1200,
     "fast": 800
   },
-  "encodedBytes": 1206720,
-  "uncompressedBytes": 4194304,
-  "sourceRgbaPreserved": true,
+  "encodedBytes": 2686446,
+  "uncompressedBytes": 9437184,
+  "sourceRgbPreserved": true,
+  "alphaEstimated": true,
   "displayFormat": "premultiplied BGRA"
 }

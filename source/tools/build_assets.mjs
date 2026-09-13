@@ -43,9 +43,14 @@ for(const name of Object.keys(SOURCES)) {
     fs.writeFileSync(path.join(outputDir,'walk',`${name}_walk_${String(slot+1).padStart(2,'0')}.png`),png);
     frames.push(encode(cells[slot]));
   }
-  // Already the required 4 x 2 contact sheet: avoid compositing and preserve
-  // the original file bytes, including native alpha and transparent RGB.
-  fs.copyFileSync(sourcePath,path.join(outputDir,`${name}_walk8.png`));
+  // Assemble fixed cells without moving them or changing any decoded RGB.
+  const sheet=Buffer.alloc(n*4*n*2*4);
+  for(let slot=0;slot<FRAME_COUNT;slot++) for(let y=0;y<n;y++) {
+    const dest=((Math.floor(slot/4)*n+y)*n*4+(slot%4)*n)*4;
+    cells[slot].copy(sheet,dest,y*n*4,(y+1)*n*4);
+  }
+  await sharp(sheet,{raw:{width:n*4,height:n*2,channels:4}})
+    .png({compressionLevel:9,adaptiveFiltering:true}).toFile(path.join(outputDir,`${name}_walk8.png`));
   reports[name]=report;
 }
 const header=Buffer.alloc(24+frames.length*8);header.write('MKCT',0,'ascii');
@@ -55,8 +60,8 @@ frames.forEach((bytes,i)=>{header.writeUInt32LE(offset,24+i*8);header.writeUInt3
 const blob=Buffer.concat([header,...frames]);
 fs.writeFileSync(path.join(outputDir,'sprites.rle'),blob);
 fs.writeFileSync(path.join(outputDir,'reference-import.json'),JSON.stringify(reports,null,2));
-fs.writeFileSync(path.join(outputDir,'asset-report.json'),JSON.stringify({version:'1.8.0',width:n,height:n,cats:2,
+fs.writeFileSync(path.join(outputDir,'asset-report.json'),JSON.stringify({version:'1.8.1',width:n,height:n,cats:2,
   framesPerCat:FRAME_COUNT,walkingFramesPerCat:FRAME_COUNT,frameOrder:'F01..F08',normalCycleMs:CYCLE_MS.normal,
   cycleMs:CYCLE_MS,encodedBytes:blob.length,uncompressedBytes:2*FRAME_COUNT*n*n*4,
-  sourceRgbaPreserved:true,displayFormat:'premultiplied BGRA'},null,2));
+  sourceRgbPreserved:true,alphaEstimated:true,displayFormat:'premultiplied BGRA'},null,2));
 console.log(`sprites: 2 cats x ${FRAME_COUNT} frames, ${n} x ${n}, ${blob.length} bytes`);

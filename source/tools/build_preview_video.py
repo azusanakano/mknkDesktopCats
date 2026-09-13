@@ -4,7 +4,7 @@
 Requirements: Python 3, Pillow, and ffmpeg on PATH.
 Run: python tools/build_preview_video.py
 Frames are composited in a temporary directory outside the application package.
-The original RGBA cells are neither resampled nor retouched.
+The generated alpha masks use the exact RGB and cell coordinates of the JPEGs.
 """
 
 from __future__ import annotations
@@ -18,10 +18,10 @@ import tempfile
 from PIL import Image, ImageDraw, ImageFont
 
 
-WIDTH, HEIGHT = 960, 400
+WIDTH, HEIGHT = 1440, 520
 FPS, FRAME_COUNT = 30, 144
-CELL_SIZE, SPRITE_COUNT, FRAME_MS = 256, 8, 150
-GROUND_Y, SPEED = 286, 40.0
+CELL_SIZE, SPRITE_COUNT, FRAME_MS = 384, 8, 150
+GROUND_Y, SPEED = 386, 60.0
 
 
 def font(size: int, bold: bool = False):
@@ -40,8 +40,8 @@ def font(size: int, bold: bool = False):
 
 def load_cells(path: Path) -> list[Image.Image]:
     with Image.open(path) as sheet:
-        if sheet.mode != 'RGBA' or sheet.size != (1024, 512):
-            raise ValueError(f'Expected untouched 1024 x 512 RGBA source: {path}')
+        if sheet.mode != 'RGBA' or sheet.size != (1536, 768):
+            raise ValueError(f'Expected prepared 1536 x 768 RGBA sheet: {path}')
         return [
             sheet.crop(((i % 4) * CELL_SIZE, (i // 4) * CELL_SIZE,
                         (i % 4 + 1) * CELL_SIZE, (i // 4 + 1) * CELL_SIZE))
@@ -60,10 +60,10 @@ def main() -> None:
     if not shutil.which('ffmpeg'):
         raise SystemExit('ffmpeg must be installed and available on PATH.')
 
-    artwork = source_root / 'art_source' / 'reference'
-    yuri = load_cells(artwork / 'yuri_walk_sheet.png')
+    artwork = source_root / 'build' / 'assets'
+    yuri = load_cells(artwork / 'yuri_walk8.png')
     onyankopon = [cell.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-                 for cell in load_cells(artwork / 'onyankopon_walk_sheet.png')]
+                 for cell in load_cells(artwork / 'onyankopon_walk8.png')]
     title_font, name_font = font(27, True), font(20, True)
     small_font, frame_font = font(17), font(18, True)
 
@@ -72,10 +72,10 @@ def main() -> None:
     draw.text((28, 24), 'Yuri & Onyankopon', font=title_font, fill='#20392f')
     draw.text((29, 67), '8 frames | 1.2 s / cycle | asset preview',
               font=small_font, fill='#56695f')
-    draw.rounded_rectangle((12, 101, 948, 294), radius=18, fill='#fafcfb')
+    draw.rounded_rectangle((12, 101, WIDTH-12, 394), radius=18, fill='#fafcfb')
     draw.line((28, GROUND_Y, WIDTH - 28, GROUND_Y), fill='#c4d2c9', width=1)
-    draw.line((28, 348, WIDTH - 28, 348), fill='#d1dbd5', width=1)
-    draw.text((29, 366), 'Original full-body frames. Native 256 px cells. No pose interpolation.',
+    draw.line((28, 448, WIDTH - 28, 448), fill='#d1dbd5', width=1)
+    draw.text((29, 466), 'v1.8.1 | New JPEG artwork. Background mask estimated. No pose interpolation.',
               font=small_font, fill='#56695f')
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -86,12 +86,12 @@ def main() -> None:
             slot = (index * 1000 // (FPS * FRAME_MS)) % SPRITE_COUNT
             canvas = base.copy()
             for cells, x_start, direction, bottom, label in (
-                (yuri, 16, 1, 242, 'Yuri'),
-                (onyankopon, 696, -1, 228, 'Onyankopon'),
+                (yuri, 16, 1, 364, 'Yuri'),
+                (onyankopon, WIDTH-400, -1, 343, 'Onyankopon'),
             ):
                 x = round(x_start + direction * SPEED * elapsed)
                 canvas.alpha_composite(cells[slot], (x, GROUND_Y - bottom))
-                ImageDraw.Draw(canvas).text((x + CELL_SIZE // 2, 312), label,
+                ImageDraw.Draw(canvas).text((x + CELL_SIZE // 2, 412), label,
                                            anchor='mt', font=name_font, fill='#355448')
             ImageDraw.Draw(canvas).text((WIDTH - 29, 38),
                                        f'FRAME {slot + 1:02d} / 08', anchor='rm',

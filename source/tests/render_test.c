@@ -155,7 +155,7 @@ int main(void) {
     int nextSize = g_sizes[(si + 1) % 3];
     int resizedY = pet.baseY + ground_offset(cat, s) - ground_offset(cat, nextSize);
     assert(resizedY + ground_offset(cat, nextSize) == originalGround);
-    assert(ground_offset(cat, 256) == (cat ? 228 : 242));
+    assert(ground_offset(cat, 384) == (cat ? 343 : 364));
   }
   /* Select monitor from the intended coordinates, including saved/dragged
      positions, instead of the stale HWND location before first rendering. */
