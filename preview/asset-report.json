@@ -1,20 +1,31 @@
 {
-  "version": "1.8.1",
-  "width": 384,
-  "height": 384,
+  "version": "1.9.3",
+  "width": 425,
+  "height": 425,
   "cats": 2,
-  "framesPerCat": 8,
+  "framesPerCat": 14,
   "walkingFramesPerCat": 8,
-  "frameOrder": "F01..F08",
+  "restingFramesPerCat": 6,
+  "restActions": [
+    "sit",
+    "sleep",
+    "stretch",
+    "paw",
+    "jump",
+    "alert"
+  ],
+  "frameOrder": "F01..F08, sit, sleep, stretch, paw, jump, alert",
   "normalCycleMs": 1200,
   "cycleMs": {
     "slow": 2400,
     "normal": 1200,
     "fast": 800
   },
-  "encodedBytes": 2686446,
-  "uncompressedBytes": 9437184,
-  "sourceRgbPreserved": true,
+  "encodedBytes": 5158657,
+  "uncompressedBytes": 20230000,
+  "originalSourceBytesPreserved": true,
+  "sourceRgbPreserved": false,
+  "wholeFrameUniformResampling": true,
   "alphaEstimated": true,
   "displayFormat": "premultiplied BGRA"
 }

@@ -1,225 +1,531 @@
 {
   "result": "PASS",
-  "version": "1.8.1",
+  "version": "1.9.3",
   "cats": [
     {
       "name": "yuri",
-      "sourceSha256": "78e670d6afe8cb87643abfe1c37089a4c433bcc639a6b40932921d4de5ff0bbe",
+      "sourceSha256": "9d989f4a5198569387e402bdc47518928fd62902f97861d848a4e32da4be4e75",
+      "sourceWidth": 2048,
+      "sourceHeight": 1024,
+      "rowOrigins": [
+        21,
+        504
+      ],
+      "rowHeights": [
+        512,
+        512
+      ],
+      "displayGroundExclusive": 349,
+      "maximumVisibleBottom": 349,
+      "discardedBackgroundPixels": 59392,
+      "reusedBackgroundPixels": 59392,
       "frames": [
         {
           "frame": 1,
           "crop": {
             "x": 0,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 45723,
-          "groundExclusive": 364,
-          "rgbaSha256": "63d6b4332ad96ea55ea71f55cd0be2c6fc39ad802db109efc45379cff4819ecb"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "42540afce6134f3feff5315ee3ee40666418590c562ef35d567f38a967da1035",
+          "preResizeRgbaSha256": "9ab9d9c3f9afc603a8e8f6a395e338724aa4b9cb5d55cccead522a3664394bd0",
+          "rgbaSha256": "4ca1e586cc636bea1afb139c4a150f5e7d431954ce8bf7e0e6ecc98f5a4abec2",
+          "visiblePixels": 54090,
+          "opaquePixels": 48262,
+          "groundExclusive": 347,
+          "partialAlphaPixels": 5828,
+          "sourceGreenBackgroundPixelsRemoved": 186345,
+          "sourceNeutralCorePixelsPreserved": 72670
         },
         {
           "frame": 2,
           "crop": {
-            "x": 384,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "x": 512,
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 41776,
-          "groundExclusive": 364,
-          "rgbaSha256": "68098a86ce6e506576fd5d6eb02d7b8b0054dd33c2867d73b82cada90f90f936"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "edc19bdf01da5ccd9b3ddf9202c2489dd3a7c4f9596449026626800453b505f5",
+          "preResizeRgbaSha256": "5b3e392a89c045276a3b189566290d36396b5f320c8bc945b0e2152d0597417e",
+          "rgbaSha256": "a3ffd952d362ea3dfc996660435a2bd3e4db2ddf641f357f2f4f9ae5f837bc9e",
+          "visiblePixels": 50370,
+          "opaquePixels": 45019,
+          "groundExclusive": 347,
+          "partialAlphaPixels": 5351,
+          "sourceGreenBackgroundPixelsRemoved": 191501,
+          "sourceNeutralCorePixelsPreserved": 67934
         },
         {
           "frame": 3,
           "crop": {
-            "x": 768,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "x": 1024,
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 42498,
-          "groundExclusive": 364,
-          "rgbaSha256": "d52e4b77ece14c96fff4e52306a4de6e88d8dd358a01d036476945898b91cb0a"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "634ddf5d4c240a6c90079696817d1c94a8feeda4be7989e6ddccbcec6b9eb0e2",
+          "preResizeRgbaSha256": "3b18bb20bb1e4dca83ad8d3610b19a18857b4b711fbc5cbce13d2a0d1a31314b",
+          "rgbaSha256": "24000fe01f250cf241579203c85cd0e8a2d80ded18dbbfba91ae16cbac73a2b9",
+          "visiblePixels": 49004,
+          "opaquePixels": 43977,
+          "groundExclusive": 347,
+          "partialAlphaPixels": 5027,
+          "sourceGreenBackgroundPixelsRemoved": 193359,
+          "sourceNeutralCorePixelsPreserved": 66271
         },
         {
           "frame": 4,
           "crop": {
-            "x": 1152,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "x": 1536,
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 43691,
-          "groundExclusive": 364,
-          "rgbaSha256": "c68067d811b3f03732082002f9b1832722981ab35784c67b835d9bd6a90d26fe"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "7e80cf47cac955b8a555bb8d68cbc43e09b2b744dc040703868d7f523792de3a",
+          "preResizeRgbaSha256": "081b587ebbb4583aac40cc99e8d24834ce14fcbbe9e267b572c899c0389f7949",
+          "rgbaSha256": "38840eff37e65d863bd442003bdcf6cfa2f0e28f4a67cdceda062c3ecacb8b1a",
+          "visiblePixels": 52061,
+          "opaquePixels": 46406,
+          "groundExclusive": 347,
+          "partialAlphaPixels": 5655,
+          "sourceGreenBackgroundPixelsRemoved": 189210,
+          "sourceNeutralCorePixelsPreserved": 70076
         },
         {
           "frame": 5,
           "crop": {
             "x": 0,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "y": 504,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 42495,
-          "groundExclusive": 363,
-          "rgbaSha256": "a77f5b2f1615bb114d627cea8df0f9c15fa3d838b3fcb2d92924cb8ebf21b3ac"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "20f70c3ba447f13d1176fa11f5c2ec2833af14ba3e0f86984aa74b906c401808",
+          "preResizeRgbaSha256": "1136e3e2042e623c4f7ffa29f8a3d3fe5fe0e684bf72635f2204f8de95279891",
+          "rgbaSha256": "a467986f98d7ad5383ee3c06afa706f18c3b70547f06b3f0d9f45f640f10737e",
+          "visiblePixels": 52437,
+          "opaquePixels": 46857,
+          "groundExclusive": 348,
+          "partialAlphaPixels": 5580,
+          "sourceGreenBackgroundPixelsRemoved": 188587,
+          "sourceNeutralCorePixelsPreserved": 70491
         },
         {
           "frame": 6,
           "crop": {
-            "x": 384,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "x": 512,
+            "y": 504,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 42474,
-          "groundExclusive": 363,
-          "rgbaSha256": "d6d956b3bbac3bc4dcc84ec9bc8d485c528de1d4f04e120e9650d755db9885b8"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "90c088b2c1050c119e7aa98fb12c3bf5e8ecbd8ba20caa1cfced4b38e840682a",
+          "preResizeRgbaSha256": "7b14b830ff27429d7879f55ebc0bbdc616699af0a5cff848910eb18508881f7b",
+          "rgbaSha256": "60bea0141f89dcb493891359122eb621a690a1986087647501df44fc2d606c34",
+          "visiblePixels": 49989,
+          "opaquePixels": 44908,
+          "groundExclusive": 349,
+          "partialAlphaPixels": 5081,
+          "sourceGreenBackgroundPixelsRemoved": 191929,
+          "sourceNeutralCorePixelsPreserved": 67618
         },
         {
           "frame": 7,
           "crop": {
-            "x": 768,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "x": 1024,
+            "y": 504,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 42815,
-          "groundExclusive": 364,
-          "rgbaSha256": "532df0cf5c055ee4948ed068808c50bcc7159f873175d6351ccc0cfdf43713de"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "7b51e7ab195944d07c437e4c9d829c518f025be5306ddf5a9a2643b8754e8a36",
+          "preResizeRgbaSha256": "af8a7bc2a22fa55491f4d678887f0bd7ca6a729865f3227c31204e9f5740a921",
+          "rgbaSha256": "d2b2f2a8ed9ce22a28bc33134eb84f1e2e93ff4aec340c1d48dd8b3435d1e74a",
+          "visiblePixels": 48965,
+          "opaquePixels": 44113,
+          "groundExclusive": 349,
+          "partialAlphaPixels": 4852,
+          "sourceGreenBackgroundPixelsRemoved": 193347,
+          "sourceNeutralCorePixelsPreserved": 66359
         },
         {
           "frame": 8,
           "crop": {
-            "x": 1152,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "x": 1536,
+            "y": 504,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 44736,
-          "groundExclusive": 364,
-          "rgbaSha256": "babde152751b28855c5f467da5248918e4bc633ee6247072fd8ae02456efe9df"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "37534e77da2a308f6cda3ec70f41889d098a3cc14b289014471be592515b3948",
+          "preResizeRgbaSha256": "fa98fd826ea7924d1dc7dc6e7c08df25adb7d94de1bbdeba4ed73614b36f5ff1",
+          "rgbaSha256": "691af45fe6a13b07380aa9cf8fb7923503d5cda9afcb4e1217edf6d408353852",
+          "visiblePixels": 53524,
+          "opaquePixels": 47730,
+          "groundExclusive": 349,
+          "partialAlphaPixels": 5794,
+          "sourceGreenBackgroundPixelsRemoved": 187163,
+          "sourceNeutralCorePixelsPreserved": 71912
         }
       ]
     },
     {
       "name": "onyankopon",
-      "sourceSha256": "555c51736a7b7078ab4c77686633d805a2b527367853ad58a2ab6d900f808ac2",
+      "sourceSha256": "212a0fb69d8d926dbbc690d1a731e8a91266433d86be05c6c5a47cf8644dfb66",
+      "sourceWidth": 2048,
+      "sourceHeight": 1012,
+      "rowOrigins": [
+        21,
+        501
+      ],
+      "rowHeights": [
+        512,
+        511
+      ],
+      "displayGroundExclusive": 349,
+      "maximumVisibleBottom": 349,
+      "discardedBackgroundPixels": 43008,
+      "reusedBackgroundPixels": 65536,
       "frames": [
         {
           "frame": 1,
           "crop": {
             "x": 0,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 40990,
-          "groundExclusive": 342,
-          "rgbaSha256": "479d0e743d7b490957adda98bfa8d57c49c8601bc1cefda5deefacc22c58f5ac"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "e0a83936d1026bd5bcaa360861d33122cdf8ee59c084fd0771d06165d34fc3a5",
+          "preResizeRgbaSha256": "9737e1b3edcb7b9c81a2635b9b8ad00c6aae2191bcb4c29c0f77c2f02acd7d1c",
+          "rgbaSha256": "1fe479fac2d39e69065680b3c579510c125e9ca54bb52179dd7b49f53345e07e",
+          "visiblePixels": 46807,
+          "opaquePixels": 41003,
+          "groundExclusive": 346,
+          "partialAlphaPixels": 5804,
+          "sourceGreenBackgroundPixelsRemoved": 196892,
+          "sourceNeutralCorePixelsPreserved": 62536
         },
         {
           "frame": 2,
           "crop": {
-            "x": 384,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "x": 512,
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 39615,
-          "groundExclusive": 343,
-          "rgbaSha256": "04c7060af32065ce0fa1b64af4aed7cc4d58d11a19f839fb24d956a4f2705a88"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "4858b1a95f1dc349a4b2f702c9ed3b315f84ea8318a63ca648c593f21fe228e9",
+          "preResizeRgbaSha256": "55be6f80ed92bac4eb82ca52d4de0d8e973519fa06b87c9393ed912d5281792d",
+          "rgbaSha256": "41db145e81e5bf154bbbd9f7e28f800ea84b8cad819c5d771dbfe9d05dd5e450",
+          "visiblePixels": 46071,
+          "opaquePixels": 40429,
+          "groundExclusive": 345,
+          "partialAlphaPixels": 5642,
+          "sourceGreenBackgroundPixelsRemoved": 197882,
+          "sourceNeutralCorePixelsPreserved": 61590
         },
         {
           "frame": 3,
           "crop": {
-            "x": 768,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "x": 1024,
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 39478,
-          "groundExclusive": 342,
-          "rgbaSha256": "533aef75583812ddfbf9f9381f09214b0af37c3a7dfdff878a46ae390fa8337c"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "96b0cd4d4b6d22e9e98b7ed985c7ce8fc061d1cfe932a6802912df9ac6b5e0f6",
+          "preResizeRgbaSha256": "7ac250cb85482e0d2f7bfa66e760b68218191d9e1d1163e0f90d74bb1347f493",
+          "rgbaSha256": "fdda33dedcbf6b40dc8a5708a68915715b913be25b45dc5ccb32658a715da797",
+          "visiblePixels": 44611,
+          "opaquePixels": 39490,
+          "groundExclusive": 349,
+          "partialAlphaPixels": 5121,
+          "sourceGreenBackgroundPixelsRemoved": 199752,
+          "sourceNeutralCorePixelsPreserved": 59935
         },
         {
           "frame": 4,
           "crop": {
-            "x": 1152,
-            "y": 0,
-            "width": 384,
-            "height": 384
+            "x": 1536,
+            "y": 21,
+            "width": 512,
+            "height": 512
           },
-          "visiblePixels": 39927,
-          "groundExclusive": 342,
-          "rgbaSha256": "2770d658c2f82a8ead31ae4f51828bf3f704f76e57584ad1a4d0707b6079a874"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 0
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "8a9f87b67009cdc68d614ca57f4ed9f832912d0e0812dec64a1eb57a95de4a8e",
+          "preResizeRgbaSha256": "74417607d68864a44b80b1cc10a12c9b0962a5b31acddce3fe38aa8de7e474ad",
+          "rgbaSha256": "bc2b5232026590640e3c247ef28c139a876caec01ef3ce5dd0aeae624f187a7b",
+          "visiblePixels": 45621,
+          "opaquePixels": 40026,
+          "groundExclusive": 348,
+          "partialAlphaPixels": 5595,
+          "sourceGreenBackgroundPixelsRemoved": 198504,
+          "sourceNeutralCorePixelsPreserved": 60912
         },
         {
           "frame": 5,
           "crop": {
             "x": 0,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "y": 501,
+            "width": 512,
+            "height": 511
           },
-          "visiblePixels": 39405,
-          "groundExclusive": 342,
-          "rgbaSha256": "361ef3535880ef7e2f938a6657b085a45e77207013fa0483188ef5bd7a15f12b"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 1
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "07552c35e8c600ec35f60acbb315e7e0201a6e9d19735c900ba8f757b3fe1e39",
+          "preResizeRgbaSha256": "a596841c84f2a45199dd8bea3036cee3869647354c5a2f1ef31702a66f3e1112",
+          "rgbaSha256": "1e4b25c03b551245677a33d30a43f9f322cb6e942e6e9ab2f93037c5947397b7",
+          "visiblePixels": 46621,
+          "opaquePixels": 40809,
+          "groundExclusive": 345,
+          "partialAlphaPixels": 5812,
+          "sourceGreenBackgroundPixelsRemoved": 196690,
+          "sourceNeutralCorePixelsPreserved": 62271
         },
         {
           "frame": 6,
           "crop": {
-            "x": 384,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "x": 512,
+            "y": 501,
+            "width": 512,
+            "height": 511
           },
-          "visiblePixels": 38568,
-          "groundExclusive": 341,
-          "rgbaSha256": "3fb9882bfe3933c71e7530210c6d4f0086238ffca0113bd1c09a46cd95220769"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 1
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "c6ca2bbb18cfb9656df1b8200d9e5c442984127b1ade252d7a9375d0173f9ebc",
+          "preResizeRgbaSha256": "157b9ae1303d7ee393e9b2267bcc3e92412e86e53da3a7765474f4f8ecfa929b",
+          "rgbaSha256": "daca46af31f3bbf7b46c2a478372996ddecbdd24cc07c3f3e39b74c785f963ec",
+          "visiblePixels": 44313,
+          "opaquePixels": 39111,
+          "groundExclusive": 348,
+          "partialAlphaPixels": 5202,
+          "sourceGreenBackgroundPixelsRemoved": 199813,
+          "sourceNeutralCorePixelsPreserved": 59451
         },
         {
           "frame": 7,
           "crop": {
-            "x": 768,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "x": 1024,
+            "y": 501,
+            "width": 512,
+            "height": 511
           },
-          "visiblePixels": 39707,
-          "groundExclusive": 339,
-          "rgbaSha256": "cfbb143d24d748d1f5880a993d4e22622431838c184f392a7a18a88ef00f4ffb"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 1
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "a897639c38668d295bf5479dd6c2c4ab79e666a5f9713ace3a144bb644c738cf",
+          "preResizeRgbaSha256": "c942daba6697965885668423fb3610157991490832284903bf25c8897d944f93",
+          "rgbaSha256": "feb29cb7a1b1d78d723258cb37a9ce50f40bc76b4ec948e8e2fac58c9583ef2c",
+          "visiblePixels": 44363,
+          "opaquePixels": 39119,
+          "groundExclusive": 346,
+          "partialAlphaPixels": 5244,
+          "sourceGreenBackgroundPixelsRemoved": 199685,
+          "sourceNeutralCorePixelsPreserved": 59449
         },
         {
           "frame": 8,
           "crop": {
-            "x": 1152,
-            "y": 384,
-            "width": 384,
-            "height": 384
+            "x": 1536,
+            "y": 501,
+            "width": 512,
+            "height": 511
           },
-          "visiblePixels": 40570,
-          "groundExclusive": 342,
-          "rgbaSha256": "42c861a2826a7306abb61bdda831e5c132f5c8e617c858457b74d2947eae503a"
+          "sourceCellSize": 512,
+          "padding": {
+            "right": 0,
+            "bottom": 1
+          },
+          "resized": {
+            "width": 425,
+            "height": 425
+          },
+          "scale": 0.830078125,
+          "cropRgbSha256": "7e7ef9544c4dc52ac143b01fa62fcb4c2c7e9c7a6f36f80ff4ff1a299d25d04d",
+          "preResizeRgbaSha256": "a632a1fe932f6468be5e59b0bd139d797d730a667b5ec379303b323feb6509a6",
+          "rgbaSha256": "f49c55326976c1eb87e948799b82967964b65557695567ea1b7bbdfb5d449860",
+          "visiblePixels": 47073,
+          "opaquePixels": 41313,
+          "groundExclusive": 345,
+          "partialAlphaPixels": 5760,
+          "sourceGreenBackgroundPixelsRemoved": 196010,
+          "sourceNeutralCorePixelsPreserved": 62957
         }
       ]
     }
   ],
-  "allSourceRgbPixelsChecked": 2359296,
-  "exactSourceRgbPixels": 2359296,
-  "visiblePixels": 664468,
-  "removedBrightPixels": 5,
-  "sourceRgbOrCoordinateMismatches": 0,
+  "walkingFramesPerCat": 8,
+  "restFramesPerCat": 6,
+  "totalFramesPerCat": 14,
+  "walkSource": "2026-09-14 uploaded Gemini_Generated_Image JPEG sheets",
+  "originalSourceBytesVerified": true,
+  "sourceCropRgbPreservedBeforeResize": true,
+  "exactPreResizeSourceRgbPixels": 4192256,
+  "preResizeSourceRgbMismatches": 0,
+  "sourceUniformScale": 0.830078125,
+  "sourceCellSize": 512,
+  "runtimeRgbResampled": true,
+  "resamplingKernel": "lanczos3",
+  "transformedRgbaPixelsChecked": 2890000,
+  "transformedRgbaMismatches": 0,
+  "walkPoseOrderMatchesNewSources": true,
+  "uniformResampledRgbaMatchesNewSources": true,
+  "visiblePixels": 775920,
+  "greenBackgroundPixelsRemoved": 3106669,
+  "neutralCorePixelsPreserved": 1042432,
+  "partialAlphaPixels": 87348,
+  "paddingPixels": 2048,
+  "discardedBackgroundPixels": 102400,
+  "reusedBackgroundPixels": 124928,
+  "sourceCropCoordinateMismatches": 0,
   "sourcePoseWarp": false,
   "sourceFrameReordering": false,
   "sourcePerFrameAlignment": false,
+  "rowLayoutNormalization": true,
+  "cellSize": 425,
   "alphaEstimated": true,
   "alphaGroundTruthAvailable": false,
-  "embeddedAssetBytesVerified": 2686446,
-  "exeBytes": 2708992,
-  "exeSha256": "86567aef8c036f0a8b689e814f99f7f06370ddcdae80146fecfa4e22e7e71017",
+  "embeddedAssetBytesVerified": 5158657,
+  "runtimeWalkPremultipliedPixelsChecked": 2890000,
+  "exeBytes": 5186048,
+  "exeSha256": "0a22779a07ba18ec39e46f09a293ad22ba4f7583ca208e0ba1fb45495d86f872",
   "normalCycleMs": 1200,
   "cycleMs": {
     "slow": 2400,
@@ -227,5 +533,32 @@
     "fast": 800
   },
   "windowsDesktopLaunchTested": false,
-  "windowsCpuMeasured": false
+  "windowsCpuMeasured": false,
+  "actualBase": {
+    "requestedVersion": "1.8.1",
+    "exactRequestedVersionAvailable": false,
+    "version": "1.9.2",
+    "runtimeFilesByteIdentical": 7,
+    "brandChanged": false,
+    "settingsAndExeNameChanged": false
+  },
+  "preservedFromV190": {
+    "result": "PASS",
+    "logicFilesChecked": 8,
+    "mainCodeChange": "version labels and About-menu integration only",
+    "restPngFilesByteIdentical": 12,
+    "allRestRgbaAndImportParametersUnchanged": true,
+    "walkTimingAndMotionLogicUnchanged": true,
+    "behaviorAndSettingsCodeUnchanged": true
+  },
+  "versionInformation": {
+    "result": "PASS",
+    "productVersion": "1.9.3",
+    "fileVersion": "1.9.3.0",
+    "resourceLanguage": "Japanese/Unicode",
+    "resourceRvaValid": true,
+    "current28ImageBundleEmbedded": true,
+    "runtimeVersionLabelsPresent": true,
+    "windowsExplorerTested": false
+  }
 }

@@ -1,54 +1,58 @@
-mknkDesktopCats 1.8.1 — ネコシステム社
-作成日: 2026-09-13 / 対象: Windows 10 / 11 x64
+mknkDesktopCats v1.9.3 — 2026-09-14
+Windows x64 / ネコシステム社
 
-今回の変更
-新たに添付されたJPEG2枚へ差し替え。1536×768、4列×2行、384×384の8コマ。
-操作・速度・移動量・設定保存先・EXE名・ブランドは前版から維持。
-JPEGの黒背景から透過情報だけを推定。原画JPEGの再圧縮、RGB変更、描き直し、
-部位変形、中間コマ生成、コマごとの位置合わせは行っていない。
+今回の変更:
+添付JPEG2枚から各8コマの歩行画像を差し替え。
+指定の1.8.1本体は取得できず、取得できた後継1.9.2を土台とした。
+歩行以外の12枚、動作・設定・EXE名・ブランドは1.9.2から維持。
+原画JPEGは無変更。緑背景からアルファを推定し、固定行切り出しを行い、
+すべて512pxセルから共通倍率425/512で縮小。中間姿勢・個別脚変形なし。
 
-原画SHA-256
-ゆりちゃん: 78e670d6afe8cb87643abfe1c37089a4c433bcc639a6b40932921d4de5ff0bbe
-オニャンコポン: 555c51736a7b7078ab4c77686633d805a2b527367853ad58a2ab6d900f808ac2
+確認済み:
+- Windows x64 PEのビルド、既存ホストテスト、画像埋め込み、版情報。
+- 新しい歩行16枚は原画ハッシュ・切り出し・共通縮小結果を検証。
+- 動作等の7ソースファイルは取得済み1.9.2とバイト単位で同一。
+- 休息PNG12枚とRGBA・取り込み条件は従来と同一。
+- 全28枚のPNGとEXEの乗算済みBGRAデータの一致。
+- 再生順・3速度・停止/非表示/ドラッグ・座る/眠る/伸び・キャッシュは
+  Windows APIをスタブ化したホストテストを含む既存テストに合格。
+- HTMLプレビュー再生成・JavaScript構文検査。
+- MP4素材プレビュー再生成。
+- 歩行16枚の明暗背景での目視: 全身・尾・足先を確認。
 
-実行ファイル
-mknkDesktopCats.exe: 2,708,992 bytes
-SHA-256: 86567aef8c036f0a8b689e814f99f7f06370ddcdae80146fecfa4e22e7e71017
-画像内蔵、追加ランタイム不要の構成。
-インポートDLL: kernel32.dll / user32.dll / gdi32.dll / shell32.dll / advapi32.dll
-表示用RLE: 2,686,446 bytes。全16枚が重複しないこと、EXE内の完全一致を確認。
+未確認:
+Windows実機の起動・操作、CPU使用率、Explorerの表示。
+HTMLのブラウザー実操作。MP4は素材デモでありWindowsの録画ではない。
+透明度は推定。元画像の姿勢・ループのつながりは原画由来。
+元JPEGの圧縮は実行していない。PNG派生素材は可逆PNGエンコード。
 
-検証結果
-bash build.sh: PASS
-bash tests/run_tests.sh: 全項目PASS
-原画JPEGのハッシュ: 2枚一致
-デコード後RGBと固定セル座標: 全2,359,296画素一致、相違0
-PNGとRLEの乗算済みBGRA: 全2,359,296画素一致
-セル境界に不透明画素なし。全16コマの透過輪郭を白背景で目視確認。
-近黒色の透過マスクは推定であり、正解アルファとの照合はできない。
-除去された明るい画素（最大色値80超）は5画素。原画RGB自体は保持。
-尾の暗い縞は尾領域だけの半径10px閉処理で保護。
+ビルドコマンド: bash source/build.sh
+検証コマンド: bash source/tests/run_tests.sh
 
-再生・描画テスト
-F01〜F08の順序とループ、3速度、遅延時のコマ保持、速度変更時の進行率保持。
-小刻みな横移動、左右反転、3サイズのキャッシュ、位置だけの更新、ハート。
-停止・非表示・ドラッグ中の時計停止、固定接地位置、配置座標のモニター選択。
-Win32構造体、Windows x64 PE32+、GUIサブシステム、ASLR、NX、インポート。
-
-プレビュー
-HTMLの組み込みJavaScript構文を確認。
-MP4: 1440×520、30fps、144フレーム、4.8秒、H.264/yuv420p。全編デコード確認。
-いずれも素材確認用であり、Windows実行画面の録画ではない。
-
-未確認事項
-Windows実機での起動・操作・自動起動、実CPU使用率、HTMLのブラウザー実操作。
-C描画テストのWindows APIはスタブであり、実機試験の代わりではない。
-JPEGの輪郭は推定のため、細い暗縁などが残る場合がある。
-原画の足運びが生体の歩行と完全一致するという評価は行っていない。
-
-互換性と同梱
-設定: %APPDATA%\mknkDesktopCats\settings.ini
-EXE名・自動起動値名・識別子はmknkDesktopCatsで維持。
-既存の小太郎・チャコさん版は変更せず同梱。
-原画JPEG、ビルド用ソース、テスト結果、HTML/MP4プレビューを同梱。
-元JPEGに対する画像圧縮作業は実施していない。
+検証ログ:
+BITMAPINFOHEADER=40 BITMAPINFO=44 WNDCLASSEXW=80 MSG=48 CREATESTRUCTW=80 MONITORINFO=40 GUID=16 NOTIFYICONDATAW=976
+animation: both cats reach every F01..F08 pose in order at all speeds PASS
+behavior: all six restored poses, exact walk mapping, autonomous recovery, sleep-to-stretch, jump bounds and deterministic seeds PASS
+reference: F01..F08 order/loop, 3 speeds, timer stalls, speed continuity, continuous movement, scaled stride PASS
+renderer: both cats; all sizes/directions, all14 cached poses, move-only updates, hearts, pause/hide/drag clocks, stationary rest, sleep/stretch/walk recovery, action menus, encounters, adaptive idle timer PASS
+version UI: About dispatch, version text, owner, information flag, and no state changes PASS
+{
+  "result": "PASS",
+  "width": 425,
+  "height": 425,
+  "cats": 2,
+  "framesPerCat": 14,
+  "walkingFramesPerCat": 8,
+  "restFramesPerCat": 6,
+  "uniqueFrames": 28,
+  "encodedBytes": 5158657,
+  "premultipliedPixelsChecked": 5057500,
+  "minCoverage": 0.16026020761245674,
+  "maxCoverage": 0.29946020761245673
+}
+{"result":"PASS","cats":2,"framesPerCat":8,"originalSourceBytesVerified":true,"exactPreResizeSourceRgbPixels":4192256,"transformedRgbaPixelsChecked":2890000,"transformedRgbaMismatches":0,"runtimeRgbResampled":true,"resamplingKernel":"lanczos3","discardedBackgroundPixels":102400,"reusedBackgroundPixels":124928,"alphaEstimated":true,"embeddedAssetBytesVerified":5158657}
+{"result":"PASS","restoredFrames":12,"pixelsChecked":2167500,"independentSourceCoreSamples":6353,"groundExclusive":349}
+{"result":"PASS","logicFilesChecked":8,"mainCodeChange":"version labels and About-menu integration only","restPngFilesByteIdentical":12,"allRestRgbaAndImportParametersUnchanged":true,"walkTimingAndMotionLogicUnchanged":true,"behaviorAndSettingsCodeUnchanged":true}
+{"result": "PASS", "productVersion": "1.9.3", "fileVersion": "1.9.3.0", "resourceLanguage": "Japanese/Unicode", "resourceRvaValid": true, "current28ImageBundleEmbedded": true, "runtimeVersionLabelsPresent": true, "windowsExplorerTested": false}
+{'machine': '0x8664', 'sections': 11, 'entry_rva': '0x41c0', 'subsystem': 2, 'dll_characteristics': '0x160', 'size_bytes': 5186048}
+all static tests passed

@@ -1,24 +1,16 @@
 #include "win32_min.h"
 #include "walk_animation.h"
 #include "reference_walk.h"
+#include "pet_behavior.h"
 
 #define W(x) ((const WCHAR*)L##x)
 #define PET_COUNT 2
-#define SOURCE_W 384
-#define SOURCE_H 384
+#define SOURCE_W 425
+#define SOURCE_H 425
 #define TIMER_ID 1u
 #define WM_TRAY (WM_APP + 1u)
-
-enum PetState {
-  STATE_WALK = 0,
-  STATE_SIT,
-  STATE_SLEEP,
-  STATE_STRETCH,
-  STATE_PAW,
-  STATE_JUMP,
-  STATE_ALERT,
-  STATE_RUN
-};
+#define WM_CAPTURECHANGED 0x0215u
+#define WM_CANCELMODE 0x001Fu
 
 typedef struct Pet {
   int id;
@@ -32,7 +24,7 @@ typedef struct Pet {
   int y;
   int previousX;
   int previousY;
-  BYTE* walkCache;
+  BYTE* frameCache;
   int rendered;
   int renderedFrame;
   int renderedDirection;
@@ -41,9 +33,8 @@ typedef struct Pet {
   int renderedY;
   int baseY;
   int direction;
-  int state;
-  int stateTicks;
-  int animTick;
+  PetBehavior behavior;
+  int motionFresh;
   int frame;
   int visible;
   int dragging;
@@ -51,6 +42,7 @@ typedef struct Pet {
   POINT dragCursor;
   int dragWindowX;
   int dragWindowY;
+  int dragBaseY;
   int loveTicks;
   ReferenceWalk reference;
 } Pet;
@@ -88,10 +80,11 @@ static int g_tick;
 static unsigned long long g_lastUpdateMs;
 static unsigned int g_clockAccumulator;
 static int g_interactionCooldown;
+static UINT g_timerMs;
 static const int g_sizes[3] = {176, 224, 288};
 static const int g_speeds[3] = {1, 2, 3};
 /* Fixed sheet-wide alpha baseline, never adjusted per animation frame. */
-static const int g_groundBottom[PET_COUNT] = {364, 343};
+static const int g_groundBottom[PET_COUNT] = {349, 349};
 
 static LRESULT MSABI ControllerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -99,6 +92,7 @@ static void show_context_menu(int x, int y);
 static void save_settings(void);
 static void update_visibility(void);
 static void render_pet(Pet* pet);
+static void refresh_timer(void);
 
 static void mem_zero(void* target, SIZE_T bytes) {
   BYTE* p = (BYTE*)target;
@@ -263,7 +257,7 @@ static void free_sprites(void) {
   g_spriteMemory = NULLPTR;
 }
 
-/* Resize only at a size change for walking. Cache complete body sprites in
+/* Resize only at a size change. Cache every complete body sprite in
    both directions; no blending, limb deformation or image decoding per tick. */
 static void scale_sprite(BYTE* dest, const BYTE* source, int size, int direction) {
   for (int y = 0; y < size; y++) {
@@ -277,15 +271,15 @@ static void scale_sprite(BYTE* dest, const BYTE* source, int size, int direction
   }
 }
 
-static void create_walk_cache(Pet* pet, int size) {
+static void create_frame_cache(Pet* pet, int size) {
   SIZE_T frameBytes = (SIZE_T)size * size * 4u;
-  if (pet->walkCache) CALL(HeapFree)(g_heap, 0, pet->walkCache);
-  pet->walkCache = (BYTE*)CALL(HeapAlloc)(g_heap, 0, frameBytes * WALK_FRAME_COUNT * 2u);
-  if (!pet->walkCache) return; /* Fall back to scaling the changed frame only. */
+  if (pet->frameCache) CALL(HeapFree)(g_heap, 0, pet->frameCache);
+  pet->frameCache = (BYTE*)CALL(HeapAlloc)(g_heap, 0, frameBytes * FRAME_COUNT * 2u);
+  if (!pet->frameCache) return; /* Fall back to scaling the changed frame only. */
   for (int direction = 0; direction < 2; direction++) {
-    for (int slot = 0; slot < WALK_FRAME_COUNT; slot++) {
-      scale_sprite(pet->walkCache + (direction * WALK_FRAME_COUNT + slot) * frameBytes,
-                   g_frames[pet->id][walk_frames[slot]], size, direction ? -1 : 1);
+    for (int frame = 0; frame < FRAME_COUNT; frame++) {
+      scale_sprite(pet->frameCache + (direction * FRAME_COUNT + frame) * frameBytes,
+                   g_frames[pet->id][frame], size, direction ? -1 : 1);
     }
   }
 }
@@ -325,13 +319,13 @@ static int create_pet_surface(Pet* pet, int size) {
   pet->pixels = (BYTE*)pixels;
   pet->surfaceSize = size;
   pet->rendered = 0;
-  create_walk_cache(pet, size);
+  create_frame_cache(pet, size);
   return 1;
 }
 
 static void destroy_pet_surface(Pet* pet) {
-  if (pet->walkCache) CALL(HeapFree)(g_heap, 0, pet->walkCache);
-  pet->walkCache = NULLPTR;
+  if (pet->frameCache) CALL(HeapFree)(g_heap, 0, pet->frameCache);
+  pet->frameCache = NULLPTR;
   if (pet->memdc && pet->bitmap) {
     CALL(SelectObject)(pet->memdc, pet->oldBitmap);
     CALL(DeleteObject)(pet->bitmap);
@@ -400,11 +394,10 @@ static void render_pet(Pet* pet) {
     } else pet->rendered = 0;
     return;
   }
-  int slot = walk_slot_for_frame(frame);
-  if (slot >= 0 && pet->walkCache) {
+  if (pet->frameCache) {
     SIZE_T frameBytes = (SIZE_T)size * size * 4u;
-    int index = slot + (pet->direction < 0 ? WALK_FRAME_COUNT : 0);
-    mem_copy(pet->pixels, pet->walkCache + index * frameBytes, frameBytes);
+    int index = frame + (pet->direction < 0 ? FRAME_COUNT : 0);
+    mem_copy(pet->pixels, pet->frameCache + index * frameBytes, frameBytes);
   } else {
     scale_sprite(pet->pixels, g_frames[pet->id][frame], size, pet->direction);
   }
@@ -451,7 +444,7 @@ static void clamp_pet_to_work_area(Pet* pet) {
   get_work_area(pet, &area);
   pet->x = int_clamp(pet->x, area.left, int_max(area.left, area.right - size));
   pet->baseY = int_clamp(pet->baseY, area.top, int_max(area.top, area.bottom - ground_offset(pet->id, size)));
-  if (!pet->dragging && pet->state != STATE_JUMP) pet->y = pet->baseY;
+  if (!pet->dragging) pet->y = pet->baseY - pet_behavior_jump_offset(&pet->behavior, size);
 }
 
 static int is_saved_position_valid(int x, int y) {
@@ -543,24 +536,41 @@ static void update_visibility(void) {
       CALL(ShowWindow)(g_pets[i].hwnd, SW_HIDE);
     }
   }
+  refresh_timer();
 }
 
-/* Poses and translation belong to each cat's reference clock. */
+static void begin_pet_state(Pet* pet, int state) {
+  pet_behavior_begin(&pet->behavior, state);
+  pet->frame = pet_behavior_frame(&pet->behavior, pet->reference.slot);
+  pet->y = pet->baseY;
+  pet->motionFresh = 1;
+}
+
+/* Behavior selects the pose family; only a walking family advances the
+   supplied eight-frame clock. Resting never consumes that clock. */
 static void update_pet(Pet* pet) {
-  if (!pet->visible || pet->dragging || g_settings.paused) return;
+  if (!pet->visible || pet->dragging || g_settings.paused || g_fullscreenHidden) return;
   if (pet->loveTicks > 0) pet->loveTicks--;
+  pet_behavior_tick(&pet->behavior);
+  if (!pet->behavior.elapsedTicks) pet->motionFresh = 1;
+  pet->frame = pet_behavior_frame(&pet->behavior, pet->reference.slot);
+  pet->y = pet->baseY - pet_behavior_jump_offset(&pet->behavior, g_sizes[g_settings.sizeIndex]);
 }
 
 static void maybe_start_interaction(void) {
   int size = g_sizes[g_settings.sizeIndex];
   Pet* a = &g_pets[0];
   Pet* b = &g_pets[1];
-  if (g_interactionCooldown > 0) { g_interactionCooldown--; return; }
   if (!a->visible || !b->visible || a->dragging || b->dragging ||
       g_settings.paused || g_fullscreenHidden) return;
+  if (g_interactionCooldown > 0) { g_interactionCooldown--; return; }
+  if (!pet_behavior_moves(&a->behavior) || !pet_behavior_moves(&b->behavior)) return;
   if (int_abs((a->x + size / 2) - (b->x + size / 2)) < size * 2 / 3 &&
       int_abs(a->baseY - b->baseY) < size / 3) {
-    /* Keep the reference walk intact when the two cats meet. */
+    if (a->x < b->x) { a->direction = 1; b->direction = -1; }
+    else { a->direction = -1; b->direction = 1; }
+    begin_pet_state(a, STATE_ALERT);
+    begin_pet_state(b, STATE_ALERT);
     a->loveTicks = b->loveTicks = 64;
     g_interactionCooldown = 600;
   }
@@ -572,6 +582,7 @@ static void update_simulation(void) {
     int shouldHide = g_settings.autoHideFullscreen && foreground_is_fullscreen();
     if (shouldHide != g_fullscreenHidden) {
       g_fullscreenHidden = shouldHide;
+      if (!shouldHide) for (int i = 0; i < PET_COUNT; i++) g_pets[i].motionFresh = 1;
       update_visibility();
     }
   }
@@ -587,6 +598,10 @@ static void update_simulation(void) {
 static void update_reference_walk(Pet* pet, unsigned int elapsed) {
   RECT area;
   if (!pet->visible || pet->dragging || g_settings.paused || g_fullscreenHidden) return;
+  if (!pet_behavior_moves(&pet->behavior)) return;
+  /* Time spent in the previous resting action must not advance a new walk. */
+  if (pet->motionFresh) { pet->motionFresh = 0; elapsed = 0; }
+  if (pet->behavior.state == STATE_RUN) elapsed *= 2u;
   reference_advance(&pet->reference, elapsed, g_speeds[g_settings.speedIndex]);
   int size = g_sizes[g_settings.sizeIndex];
   get_work_area(pet, &area);
@@ -598,11 +613,24 @@ static void update_reference_walk(Pet* pet, unsigned int elapsed) {
   pet->baseY = int_clamp(pet->baseY, area.top, int_max(area.top, area.bottom - ground_offset(pet->id, size)));
   pet->y = pet->baseY;
   pet->previousX = pet->x; pet->previousY = pet->y;
-  pet->state = STATE_WALK;
   pet->frame = walk_frames[pet->reference.slot];
 }
 
-/* Hearts/fullscreen checks run at 50 ms. Each cat advances at most one
+static void refresh_timer(void) {
+  UINT wanted = 200u;
+  if (!g_fullscreenHidden && !g_settings.paused) {
+    for (int i = 0; i < PET_COUNT; i++) {
+      Pet* pet = &g_pets[i];
+      if (pet->visible && !pet->dragging &&
+          (pet_behavior_moves(&pet->behavior) || pet->behavior.state == STATE_JUMP))
+        wanted = TIMER_MS;
+    }
+  }
+  if (g_controller && wanted != g_timerMs &&
+      CALL(SetTimer)(g_controller, TIMER_ID, wanted, NULLPTR)) g_timerMs = wanted;
+}
+
+/* Behavior/hearts/fullscreen checks run at 50 ms. Each cat advances at most one
    supplied pose per presentation event, even after a scheduler stall. */
 static void update_all(void) {
   unsigned long long now = CALL(GetTickCount64)();
@@ -621,6 +649,7 @@ static void update_all(void) {
   for (int i = 0; i < PET_COUNT; i++) update_reference_walk(&g_pets[i], (unsigned int)elapsed);
   render_pet(&g_pets[0]);
   render_pet(&g_pets[1]);
+  refresh_timer();
 }
 
 static int is_autostart_enabled(void) {
@@ -675,11 +704,47 @@ enum MenuIds {
   ID_AUTOSTART,
   ID_AUTOHIDE,
   ID_RESET_POSITIONS,
-  ID_EXIT
+  ID_EXIT,
+  ID_YURI_ACTION_BASE = 1100,
+  ID_ONY_ACTION_BASE = 1120
 };
+#include "version_ui.h"
+
+static void apply_pet_action(int petId, int state) {
+  if (petId < 0 || petId >= PET_COUNT) return;
+  begin_pet_state(&g_pets[petId], state);
+  g_interactionCooldown = 600;
+}
+
+static int dispatch_pet_action(UINT id) {
+  if (id >= ID_YURI_ACTION_BASE && id <= ID_YURI_ACTION_BASE + STATE_RUN) {
+    apply_pet_action(0, (int)id - ID_YURI_ACTION_BASE);
+    return 1;
+  }
+  if (id >= ID_ONY_ACTION_BASE && id <= ID_ONY_ACTION_BASE + STATE_RUN) {
+    apply_pet_action(1, (int)id - ID_ONY_ACTION_BASE);
+    return 1;
+  }
+  return 0;
+}
 
 static void append_checked_item(HMENU menu, UINT id, const WCHAR* label, int checked) {
   CALL(AppendMenuW)(menu, MF_STRING | (checked ? MF_CHECKED : 0u), id, label);
+}
+
+static HMENU create_actions_menu(int petId, UINT base) {
+  HMENU menu = CALL(CreatePopupMenu)();
+  if (!menu) return menu;
+  int state = g_pets[petId].behavior.state;
+  append_checked_item(menu, base + STATE_WALK, W("歩く"), state == STATE_WALK);
+  append_checked_item(menu, base + STATE_SIT, W("座る"), state == STATE_SIT);
+  append_checked_item(menu, base + STATE_SLEEP, W("眠る"), state == STATE_SLEEP);
+  append_checked_item(menu, base + STATE_STRETCH, W("伸びをする"), state == STATE_STRETCH);
+  append_checked_item(menu, base + STATE_PAW, W("前足を上げる"), state == STATE_PAW);
+  append_checked_item(menu, base + STATE_JUMP, W("ジャンプする"), state == STATE_JUMP);
+  append_checked_item(menu, base + STATE_ALERT, W("こちらを見る"), state == STATE_ALERT);
+  append_checked_item(menu, base + STATE_RUN, W("走る"), state == STATE_RUN);
+  return menu;
 }
 
 static void show_context_menu(int x, int y) {
@@ -687,13 +752,18 @@ static void show_context_menu(int x, int y) {
   HMENU sizes = CALL(CreatePopupMenu)();
   HMENU speeds = CALL(CreatePopupMenu)();
   if (!menu || !sizes || !speeds) return;
-  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ゆりちゃん ＆ オニャンコポン  v1.8.1"));
-  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ネコシステム社・2匹とも指定8コマ"));
+  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, (const WCHAR*)APP_TITLE_VERSION_W);
+  CALL(AppendMenuW)(menu, MF_STRING | 0x0001u, 0, W("ネコシステム社・歩行とくつろぎ"));
   CALL(AppendMenuW)(menu, MF_SEPARATOR, 0, NULLPTR);
   append_checked_item(menu, ID_YURI_VISIBLE, W("ゆりちゃんを表示"), g_pets[0].visible);
   append_checked_item(menu, ID_ONY_VISIBLE, W("オニャンコポンを表示"), g_pets[1].visible);
   append_checked_item(menu, ID_PAUSE, W("動きを一時停止"), g_settings.paused);
   append_checked_item(menu, ID_CLICK_THROUGH, W("クリックをすり抜ける"), g_settings.clickThrough);
+
+  HMENU yuriActions = create_actions_menu(0, ID_YURI_ACTION_BASE);
+  HMENU onyActions = create_actions_menu(1, ID_ONY_ACTION_BASE);
+  if (yuriActions) CALL(AppendMenuW)(menu, MF_POPUP, (UINT_PTR)yuriActions, W("ゆりちゃんの動作"));
+  if (onyActions) CALL(AppendMenuW)(menu, MF_POPUP, (UINT_PTR)onyActions, W("オニャンコポンの動作"));
 
   append_checked_item(sizes, ID_SIZE_SMALL, W("小さめ"), g_settings.sizeIndex == 0);
   append_checked_item(sizes, ID_SIZE_NORMAL, W("ふつう"), g_settings.sizeIndex == 1);
@@ -710,6 +780,7 @@ static void show_context_menu(int x, int y) {
   append_checked_item(menu, ID_AUTOHIDE, W("全画面中は隠す"), g_settings.autoHideFullscreen);
   CALL(AppendMenuW)(menu, MF_STRING, ID_RESET_POSITIONS, W("2匹を呼び戻す"));
   CALL(AppendMenuW)(menu, MF_SEPARATOR, 0, NULLPTR);
+  CALL(AppendMenuW)(menu, MF_STRING, ID_VERSION_INFO, W("バージョン情報…"));
   CALL(AppendMenuW)(menu, MF_STRING, ID_EXIT, W("終了"));
   CALL(SetForegroundWindow)(g_controller);
   CALL(TrackPopupMenu)(menu, TPM_RIGHTBUTTON, x, y, 0, g_controller, NULLPTR);
@@ -737,6 +808,14 @@ static void change_size(int newIndex) {
 }
 
 static void handle_menu(UINT id) {
+  if (handle_version_info(id)) return;
+  /* Settle elapsed time under the old visibility/pause state before a user
+     action. A coarse idle timer must not replay time spent paused or hidden. */
+  update_all();
+  if (dispatch_pet_action(id)) {
+    update_visibility();
+    return;
+  }
   switch (id) {
     case ID_YURI_VISIBLE:
       g_pets[0].visible = !g_pets[0].visible;
@@ -787,7 +866,7 @@ static void add_tray_icon(void) {
   g_tray.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
   g_tray.uCallbackMessage = WM_TRAY;
   g_tray.hIcon = CALL(LoadIconW)(NULLPTR, IDI_APPLICATION);
-  wide_copy(g_tray.szTip, W("ゆりちゃん ＆ オニャンコポン  v1.8.1"), 128u);
+  wide_copy(g_tray.szTip, (const WCHAR*)APP_TITLE_VERSION_W, 128u);
   g_trayAdded = CALL(Shell_NotifyIconW)(NIM_ADD, &g_tray) != 0;
 }
 
@@ -821,12 +900,15 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
       return pet->pixels[((SIZE_T)py * size + px) * 4u + 3] < 20 ? HTTRANSPARENT : HTCLIENT;
     }
     case WM_LBUTTONDOWN:
+      update_all();
       CALL(GetCursorPos)(&pet->dragCursor);
       pet->dragWindowX = pet->x;
       pet->dragWindowY = pet->y;
+      pet->dragBaseY = pet->baseY;
       pet->dragging = 1;
       pet->dragMoved = 0;
       CALL(SetCapture)(hwnd);
+      refresh_timer();
       return 0;
     case WM_MOUSEMOVE:
       if (pet->dragging) {
@@ -837,7 +919,7 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         if (int_abs(dx) > 2 || int_abs(dy) > 2) pet->dragMoved = 1;
         pet->x = pet->dragWindowX + dx;
         pet->y = pet->dragWindowY + dy;
-        pet->baseY = pet->y;
+        pet->baseY = pet->dragBaseY + dy;
         pet->previousX = pet->x;
         pet->previousY = pet->y;
         render_pet(pet);
@@ -845,21 +927,41 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
       return 0;
     case WM_LBUTTONUP:
       if (pet->dragging) {
+        update_all();
         pet->dragging = 0;
         CALL(ReleaseCapture)();
         clamp_pet_to_work_area(pet);
         pet->previousX = pet->x;
         pet->previousY = pet->y;
-        if (!pet->dragMoved) {
+        if (!pet->dragMoved && !g_settings.paused) {
           pet->loveTicks = 70;
-
+          begin_pet_state(pet, STATE_PAW);
         }
         save_settings();
         render_pet(pet);
+        refresh_timer();
       }
       return 0;
     case WM_LBUTTONDBLCLK:
-      pet->loveTicks = 90;
+      update_all();
+      if (!g_settings.paused) {
+        pet->loveTicks = 90;
+        begin_pet_state(pet, STATE_JUMP);
+        render_pet(pet);
+        refresh_timer();
+      }
+      return 0;
+    case WM_CAPTURECHANGED:
+    case WM_CANCELMODE:
+      if (pet->dragging) {
+        update_all();
+        pet->dragging = 0;
+        if (msg == WM_CANCELMODE) CALL(ReleaseCapture)();
+        clamp_pet_to_work_area(pet);
+        render_pet(pet);
+        refresh_timer();
+        save_settings();
+      }
       return 0;
     case WM_RBUTTONUP: {
       POINT cursor;
@@ -882,6 +984,7 @@ static LRESULT MSABI ControllerProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
     case WM_CREATE:
       g_lastUpdateMs = CALL(GetTickCount64)();
       CALL(SetTimer)(hwnd, TIMER_ID, TIMER_MS, NULLPTR);
+      g_timerMs = TIMER_MS;
       return 0;
     case WM_TIMER:
       if ((UINT_PTR)wParam == TIMER_ID) update_all();
@@ -989,8 +1092,8 @@ __attribute__((noreturn)) void MSABI WinMainCRTStartup(void) {
     pet->id = i;
     pet->visible = i == 0 ? g_settings.yuriVisible : g_settings.onyankoponVisible;
     pet->direction = i == 0 ? 1 : -1;
-    pet->state = STATE_WALK;
-    pet->stateTicks = 120 + i * 50;
+    pet_behavior_init(&pet->behavior, (unsigned int)CALL(GetTickCount64)() + (unsigned int)i * 2654435761u,
+                      120u + (unsigned int)i * 50u);
     pet->frame = 0;
     pet->hwnd = CALL(CreateWindowExW)(WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
       W("mknkDesktopCats.Pet"), i == 0 ? W("ゆりちゃん") : W("オニャンコポン"), WS_POPUP,

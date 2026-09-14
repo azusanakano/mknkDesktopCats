@@ -2,13 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {importReference,SOURCES,CELL_SIZE,FRAME_COUNT,CYCLE_MS} from './import_reference.mjs';
+import {importRest,REST_COUNT,REST_ACTIONS} from './import_rest.mjs';
 const require=createRequire(import.meta.url);
 const sharp=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'sharp')):require('sharp');
 const [,,sourceDir,outputDir]=process.argv;
 if(!sourceDir||!outputDir) throw new Error('usage: build_assets.mjs <reference-dir> <output-dir>');
-const n=CELL_SIZE,frames=[],reports={};
-for(const dir of [outputDir,path.join(outputDir,'walk')]) fs.mkdirSync(dir,{recursive:true});
+const n=CELL_SIZE,frames=[],reports={},restReports={};
+const totalFrames=FRAME_COUNT+REST_COUNT;
+const restDir=path.join(path.dirname(sourceDir),'rest');
+for(const dir of [outputDir,path.join(outputDir,'walk'),path.join(outputDir,'rest')]) fs.mkdirSync(dir,{recursive:true});
+function writeComplete(file,bytes) {
+  const temporary=file+'.tmp';
+  fs.writeFileSync(temporary,bytes);
+  fs.renameSync(temporary,file);
+}
 // Remove only obsolete generated frames from the superseded 16-frame build.
 for(const name of Object.keys(SOURCES)) {
   fs.rmSync(path.join(outputDir,`${name}_walk16.png`),{force:true});
@@ -40,7 +48,7 @@ for(const name of Object.keys(SOURCES)) {
   for(let slot=0;slot<FRAME_COUNT;slot++) {
     const png=await sharp(cells[slot],{raw:{width:n,height:n,channels:4}})
       .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
-    fs.writeFileSync(path.join(outputDir,'walk',`${name}_walk_${String(slot+1).padStart(2,'0')}.png`),png);
+    writeComplete(path.join(outputDir,'walk',`${name}_walk_${String(slot+1).padStart(2,'0')}.png`),png);
     frames.push(encode(cells[slot]));
   }
   // Assemble fixed cells without moving them or changing any decoded RGB.
@@ -49,19 +57,33 @@ for(const name of Object.keys(SOURCES)) {
     const dest=((Math.floor(slot/4)*n+y)*n*4+(slot%4)*n)*4;
     cells[slot].copy(sheet,dest,y*n*4,(y+1)*n*4);
   }
-  await sharp(sheet,{raw:{width:n*4,height:n*2,channels:4}})
-    .png({compressionLevel:9,adaptiveFiltering:true}).toFile(path.join(outputDir,`${name}_walk8.png`));
+  const sheetPng=await sharp(sheet,{raw:{width:n*4,height:n*2,channels:4}})
+    .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
+  writeComplete(path.join(outputDir,`${name}_walk8.png`),sheetPng);
   reports[name]=report;
+  const rest=await importRest(sharp,restDir,name);
+  if(rest.cells.length!==REST_COUNT) throw new Error('Incorrect restored pose count');
+  for(let index=0;index<REST_COUNT;index++) {
+    const action=REST_ACTIONS[index];
+    const restPng=await sharp(rest.cells[index],{raw:{width:n,height:n,channels:4}})
+      .png({compressionLevel:9,adaptiveFiltering:true})
+      .toBuffer();
+    writeComplete(path.join(outputDir,'rest',`${name}_${action}.png`),restPng);
+    frames.push(encode(rest.cells[index]));
+  }
+  restReports[name]=rest.report;
 }
 const header=Buffer.alloc(24+frames.length*8);header.write('MKCT',0,'ascii');
-[1,n,n,2,FRAME_COUNT].forEach((v,i)=>header.writeUInt32LE(v,4+i*4));
+[1,n,n,2,totalFrames].forEach((v,i)=>header.writeUInt32LE(v,4+i*4));
 let offset=header.length;
 frames.forEach((bytes,i)=>{header.writeUInt32LE(offset,24+i*8);header.writeUInt32LE(bytes.length,28+i*8);offset+=bytes.length;});
 const blob=Buffer.concat([header,...frames]);
 fs.writeFileSync(path.join(outputDir,'sprites.rle'),blob);
 fs.writeFileSync(path.join(outputDir,'reference-import.json'),JSON.stringify(reports,null,2));
-fs.writeFileSync(path.join(outputDir,'asset-report.json'),JSON.stringify({version:'1.8.1',width:n,height:n,cats:2,
-  framesPerCat:FRAME_COUNT,walkingFramesPerCat:FRAME_COUNT,frameOrder:'F01..F08',normalCycleMs:CYCLE_MS.normal,
-  cycleMs:CYCLE_MS,encodedBytes:blob.length,uncompressedBytes:2*FRAME_COUNT*n*n*4,
-  sourceRgbPreserved:true,alphaEstimated:true,displayFormat:'premultiplied BGRA'},null,2));
-console.log(`sprites: 2 cats x ${FRAME_COUNT} frames, ${n} x ${n}, ${blob.length} bytes`);
+fs.writeFileSync(path.join(outputDir,'rest-import.json'),JSON.stringify(restReports,null,2));
+fs.writeFileSync(path.join(outputDir,'asset-report.json'),JSON.stringify({version:fs.readFileSync(new URL('../VERSION',import.meta.url),'utf8').trim(),width:n,height:n,cats:2,
+  framesPerCat:totalFrames,walkingFramesPerCat:FRAME_COUNT,restingFramesPerCat:REST_COUNT,
+  restActions:REST_ACTIONS,frameOrder:'F01..F08, sit, sleep, stretch, paw, jump, alert',normalCycleMs:CYCLE_MS.normal,
+  cycleMs:CYCLE_MS,encodedBytes:blob.length,uncompressedBytes:2*totalFrames*n*n*4,
+  originalSourceBytesPreserved:true,sourceRgbPreserved:false,wholeFrameUniformResampling:true,alphaEstimated:true,displayFormat:'premultiplied BGRA'},null,2));
+console.log(`sprites: 2 cats x (${FRAME_COUNT} walk + ${REST_COUNT} restored poses), ${n} x ${n}, ${blob.length} bytes`);

@@ -1,126 +1,135 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-export const SOURCES = {
-  yuri: {file:'yuri_walk_sheet.jpeg',sha256:'78e670d6afe8cb87643abfe1c37089a4c433bcc639a6b40932921d4de5ff0bbe',groundExclusive:364},
-  onyankopon: {file:'onyankopon_walk_sheet.jpeg',sha256:'555c51736a7b7078ab4c77686633d805a2b527367853ad58a2ab6d900f808ac2',groundExclusive:343}
-};
-export const CELL_SIZE = 384;
+
+// The two exact JPEG sheets supplied for v1.9.3. Their original file bytes are
+// retained. Cropping and the chroma matte do not recolor the decoded RGB; a
+// separate uniform resampling step fits the existing 425px runtime canvas.
+export const SOURCES = Object.freeze({
+  yuri: Object.freeze({
+    file:'yuri_walk_sheet.jpg',
+    sha256:'9d989f4a5198569387e402bdc47518928fd62902f97861d848a4e32da4be4e75',
+    width:2048,height:1024,rowOrigins:Object.freeze([21,504]),
+    rowHeights:Object.freeze([512,512]),groundExclusive:349
+  }),
+  onyankopon: Object.freeze({
+    file:'onyankopon_walk_sheet.jpg',
+    sha256:'212a0fb69d8d926dbbc690d1a731e8a91266433d86be05c6c5a47cf8644dfb66',
+    width:2048,height:1012,rowOrigins:Object.freeze([21,501]),
+    rowHeights:Object.freeze([512,511]),groundExclusive:349
+  })
+});
+export const SOURCE_WIDTH = 2048;
+// Legacy/default exports describe yuri. Use SOURCES[name] for each actual sheet.
+export const SOURCE_HEIGHT = 1024;
+export const SOURCE_CELL_SIZE = 512;
+export const CELL_SIZE = 425;
 export const FRAME_COUNT = 8;
+export const COLUMN_BOUNDS = Object.freeze([0,512,1024,1536,2048]);
+export const ROW_ORIGINS = SOURCES.yuri.rowOrigins;
+export const ROW_HEIGHTS = SOURCES.yuri.rowHeights;
+export const RESIZE_KERNEL = 'lanczos3';
 export const CYCLE_MS = Object.freeze({slow:2400,normal:1200,fast:800});
 const hash = data => crypto.createHash('sha256').update(data).digest('hex');
-// Exact replacements supplied by the user on 2026-09-13. Derive alpha only.
-// Never align separate poses, warp the body, reorder frames, or recolor pixels.
-export async function importReference(sharp,inputPath,name) {
-  const input=fs.readFileSync(inputPath);
-  if(!SOURCES[name] || hash(input)!==SOURCES[name].sha256) throw new Error(`Unapproved source: ${name}`);
-  const {data:rgb,info}=await sharp(input).removeAlpha().raw().toBuffer({resolveWithObject:true});
-  if(info.width!==1536 || info.height!==768 || info.channels!==3) throw new Error('Expected the supplied 1536 x 768 JPEG');
-  const n=CELL_SIZE,cells=[],records=[];
-  for(let slot=0;slot<FRAME_COUNT;slot++) {
-    const col=slot%4,row=Math.floor(slot/4),left=col*n,top=row*n;
-    const width=n,height=n;
-    const cell=Buffer.alloc(n*n*4),candidate=new Uint8Array(n*n);
-    for(let y=0;y<n;y++) for(let x=0;x<n;x++) {
-      const p=y*n+x,q=p*4;
-      if(x>=width || y>=height) {candidate[p]=1;continue;}
-      const t=((top+y)*1536+left+x)*3,r=rgb[t],g=rgb[t+1],b=rgb[t+2];
-      cell[q]=r;cell[q+1]=g;cell[q+2]=b;cell[q+3]=255;
-      const max=Math.max(r,g,b),spread=max-Math.min(r,g,b);
-      candidate[p]=max<=24 || (max<=36 && spread<=8) ? 1 : 0;
-    }
-    const outside=new Uint8Array(n*n),queue=new Int32Array(n*n);
-    let head=0,tail=0;
-    const add=p=>{if(candidate[p] && !outside[p]) {outside[p]=1;queue[tail++]=p;}};
-    for(let v=0;v<n;v++) {add(v);add((n-1)*n+v);add(v*n);add(v*n+n-1);}
-    while(head<tail) {
-      const p=queue[head++],x=p%n,y=Math.floor(p/n);
-      if(x) add(p-1);if(x<n-1) add(p+1);if(y) add(p-n);if(y<n-1) add(p+n);
-    }
-    // Keep the connected cat. Dark internal fur is not globally color-keyed.
-    const labels=new Int32Array(n*n);
-    let label=0,largestLabel=0,largestSize=0;
-    for(let start=0;start<labels.length;start++) {
-      if(outside[start] || labels[start]) continue;
-      label++;head=0;tail=0;labels[start]=label;queue[tail++]=start;
-      while(head<tail) {
-        const p=queue[head++],x=p%n,y=Math.floor(p/n);
-        for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) {
-          const nx=x+dx,ny=y+dy;
-          if((!dx&&!dy)||nx<0||ny<0||nx>=n||ny>=n) continue;
-          const v=ny*n+nx;
-          if(!outside[v]&&!labels[v]) {labels[v]=label;queue[tail++]=v;}
-        }
-      }
-      if(tail>largestSize) {largestSize=tail;largestLabel=label;}
-    }
-    // Close narrow notches in the matte caused by near-black tail stripes.
-    // This alters coverage only, keeping the source pixels and coordinates.
-    const mask=new Uint8Array(n*n),dilated=new Uint8Array(n*n),closed=new Uint8Array(n*n),kernel=[];
-    for(let dy=-4;dy<=4;dy++) for(let dx=-4;dx<=4;dx++) if(dx*dx+dy*dy<=16) kernel.push([dx,dy]);
-    for(let p=0;p<n*n;p++) mask[p]=!outside[p]&&labels[p]===largestLabel?1:0;
-    for(let y=4;y<n-4;y++) for(let x=4;x<n-4;x++) {
-      const p=y*n+x;
-      if(mask[p]) {dilated[p]=1;continue;}
-      for(const [dx,dy] of kernel) if(mask[p+dy*n+dx]) {dilated[p]=1;break;}
-    }
-    for(let y=4;y<n-4;y++) for(let x=4;x<n-4;x++) {
-      const p=y*n+x;
-      if(mask[p]) {closed[p]=1;continue;}
-      let all=true;
-      for(const [dx,dy] of kernel) if(!dilated[p+dy*n+dx]) {all=false;break;}
-      closed[p]=all?1:0;
-    }
-    // Protect near-black bands in the elevated tail only. A wider closing
-    // here cannot bridge the leg gaps, which are below this fixed region.
-    const tailKernel=[],tailDilated=new Uint8Array(n*n);
-    for(let dy=-10;dy<=10;dy++) for(let dx=-10;dx<=10;dx++)
-      if(dx*dx+dy*dy<=100) tailKernel.push([dx,dy]);
-    const tailRight=Math.floor(n/3),tailBottom=Math.floor(n*0.40);
-    for(let y=0;y<tailBottom+10;y++) for(let x=0;x<tailRight+10;x++) {
-      const p=y*n+x;
-      for(const [dx,dy] of tailKernel) {
-        const xx=x+dx,yy=y+dy;
-        if(xx>=0&&yy>=0&&xx<n&&yy<n&&closed[yy*n+xx]) {tailDilated[p]=1;break;}
-      }
-    }
-    for(let y=10;y<tailBottom;y++) for(let x=10;x<tailRight;x++) {
-      const p=y*n+x;if(closed[p])continue;
-      let all=true;
-      for(const [dx,dy] of tailKernel)if(!tailDilated[p+dy*n+dx]){all=false;break;}
-      if(all)closed[p]=1;
-    }
-    // Fill only tiny enclosed matte holes (e.g. dark stripes at a curled tip).
-    const visited=new Uint8Array(n*n);
-    for(let start=0;start<n*n;start++) {
-      if(closed[start]||visited[start]) continue;
-      head=0;tail=0;queue[tail++]=start;visited[start]=1;let border=false;
-      while(head<tail) {
-        const p=queue[head++],x=p%n,y=Math.floor(p/n);
-        if(!x||!y||x===n-1||y===n-1) border=true;
-        for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-          const nx=x+dx,ny=y+dy;
-          if(nx<0||ny<0||nx>=n||ny>=n) continue;
-          const v=ny*n+nx;
-          if(!closed[v]&&!visited[v]) {visited[v]=1;queue[tail++]=v;}
-        }
-      }
-      if(!border&&tail<=128) for(let i=0;i<tail;i++) closed[queue[i]]=1;
-    }
-    let visible=0,minX=n,minY=n,maxX=-1,maxY=-1;
-    for(let p=0;p<n*n;p++) {
-      if(!closed[p]) {cell[p*4+3]=0;continue;}
-      visible++;minX=Math.min(minX,p%n);maxX=Math.max(maxX,p%n);
-      minY=Math.min(minY,Math.floor(p/n));maxY=Math.max(maxY,Math.floor(p/n));
-    }
-    if(visible<20000||visible>80000) throw new Error(`${name} F${slot+1}: bad coverage ${visible}`);
-    if(minX<2||minY<2||maxX>=width-2||maxY>=height-2) throw new Error(`${name} F${slot+1}: clipped foreground`);
-    cells.push(cell);
-    records.push({frame:slot+1,crop:{x:left,y:top,width,height},padding:{right:n-width,bottom:n-height},
-      visiblePixels:visible,bounds:{minX,minY,maxX,maxY},rgbaSha256:hash(cell)});
+
+function keyedAlpha(r,g,b,sourceAlpha) {
+  const excess=g-Math.max(r,b);
+  if(excess<=8) return sourceAlpha;
+  if(excess>=40) return 0;
+  return Math.round(sourceAlpha*(40-excess)/32);
+}
+
+function measure(rgba,width,height) {
+  let visible=0,partial=0,opaque=0,minX=width,minY=height,maxX=-1,maxY=-1;
+  for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
+    const a=rgba[(y*width+x)*4+3];
+    if(!a) continue;
+    visible++;if(a===255) opaque++;else partial++;
+    minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+    minY=Math.min(minY,y);maxY=Math.max(maxY,y);
   }
-  return {cells,report:{name,source:SOURCES[name].file,sha256:hash(input),sourceWidth:1536,sourceHeight:768,
-    columns:4,rows:2,cellSize:n,frames:records,order:'row-major: F01..F08',perFrameTranslation:false,
-    poseWarp:false,interpolation:false,rgbModified:false,alphaMethod:'border-connected near-black mask; largest foreground; radius-4 matte closing; radius-10 closing in upper-left tail region only; fill enclosed holes up to 128px',
+  return {visiblePixels:visible,opaquePixels:opaque,partialAlphaPixels:partial,
+    bounds:{minX,minY,maxX,maxY},groundExclusive:maxY+1};
+}
+
+export async function importReference(sharp,inputPath,name) {
+  const input=fs.readFileSync(inputPath),spec=SOURCES[name];
+  if(!spec || hash(input)!==spec.sha256) throw new Error(`Unapproved source: ${name}`);
+  const {data:source,info}=await sharp(input).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+  if(info.width!==spec.width || info.height!==spec.height || info.channels!==4)
+    throw new Error(`Expected the supplied ${spec.width} x ${spec.height} JPEG for ${name}`);
+
+  // Full-width fixed cells retain the original column positions. Row origins
+  // remove only green margins, not pose-specific pixels. The overlapping row
+  // margins must also contain no foreground so no cat is duplicated or clipped.
+  let omittedBackgroundPixels=0,overlapBackgroundPixels=0;
+  for(let y=0;y<spec.height;y++) {
+    const uses=spec.rowOrigins.reduce((count,top,row)=>
+      count+Number(y>=top && y<top+spec.rowHeights[row]),0);
+    if(uses===1) continue;
+    for(let x=0;x<spec.width;x++) {
+      const p=(y*spec.width+x)*4;
+      if(keyedAlpha(source[p],source[p+1],source[p+2],source[p+3])!==0)
+        throw new Error(`${name}: non-background pixel in ${uses?'overlapping':'omitted'} margin (${x},${y})`);
+      if(uses===0) omittedBackgroundPixels++;else overlapBackgroundPixels++;
+    }
+  }
+
+  const n=CELL_SIZE,s=SOURCE_CELL_SIZE,cells=[],records=[];
+  for(let slot=0;slot<FRAME_COUNT;slot++) {
+    const col=slot%4,row=Math.floor(slot/4);
+    const left=COLUMN_BOUNDS[col],top=spec.rowOrigins[row];
+    const width=s,height=spec.rowHeights[row];
+    const preResize=Buffer.alloc(s*s*4),cropRgb=Buffer.alloc(width*height*3);
+    for(let y=0;y<height;y++) for(let x=0;x<width;x++) {
+      const p=(y*s+x)*4,t=((top+y)*spec.width+left+x)*4,q=(y*width+x)*3;
+      const r=source[t],g=source[t+1],b=source[t+2];
+      // Copy decoded RGB verbatim, including pixels whose new alpha is zero.
+      // No green de-spill, color correction, body warp, or component filtering.
+      preResize[p]=r;preResize[p+1]=g;preResize[p+2]=b;
+      cropRgb[q]=r;cropRgb[q+1]=g;cropRgb[q+2]=b;
+      preResize[p+3]=keyedAlpha(r,g,b,source[t+3]);
+    }
+    const sourceStats=measure(preResize,s,s);
+    if(sourceStats.visiblePixels<50000 || sourceStats.visiblePixels>90000)
+      throw new Error(`${name} F${slot+1}: bad source coverage ${sourceStats.visiblePixels}`);
+    const b=sourceStats.bounds;
+    if(b.minX<2 || b.minY<2 || b.maxX>=width-2 || b.maxY>=height-2)
+      throw new Error(`${name} F${slot+1}: clipped source foreground`);
+
+    // All sixteen whole-frame cells use exactly the same scale. This is spatial
+    // resampling only: no new animation frames or individual pose translations.
+    const cell=await sharp(preResize,{raw:{width:s,height:s,channels:4}})
+      .resize(n,n,{fit:'fill',kernel:RESIZE_KERNEL}).raw().toBuffer();
+    const stats=measure(cell,n,n);
+    if(stats.visiblePixels<30000 || stats.visiblePixels>65000)
+      throw new Error(`${name} F${slot+1}: bad runtime coverage ${stats.visiblePixels}`);
+    if(stats.groundExclusive>spec.groundExclusive)
+      throw new Error(`${name} F${slot+1}: foreground exceeds fixed ground`);
+    cells.push(cell);
+    records.push({frame:slot+1,crop:{x:left,y:top,width,height},
+      sourceCellSize:s,padding:{right:s-width,bottom:s-height},
+      resized:{width:n,height:n},scale:n/s,
+      resampling:{kernel:RESIZE_KERNEL,scaleX:n/s,scaleY:n/s,alphaAware:true},
+      cropRgbSha256:hash(cropRgb),preResizeRgbaSha256:hash(preResize),
+      preResizeRgbPreserved:true,sourceBounds:sourceStats.bounds,
+      sourceGroundExclusive:sourceStats.groundExclusive,
+      ...stats,rgbaSha256:hash(cell)});
+  }
+  return {cells,report:{name,source:spec.file,sha256:hash(input),
+    sourceWidth:spec.width,sourceHeight:spec.height,sourceFormat:'jpeg',
+    sourceBytesPreserved:true,columns:4,rows:2,columnBounds:COLUMN_BOUNDS,
+    rowOrigins:spec.rowOrigins,rowHeights:spec.rowHeights,sourceCellSize:s,cellSize:n,
+    rowLayoutNormalization:true,
+    rowLayoutNote:'Fixed row origins per supplied sheet; omitted and overlapping margins verified green. Shared source columns and uniform whole-frame 425/512 scaling; no individual pose alignment or redraw.',
+    omittedBackgroundPixels,omittedForegroundPixels:0,
+    overlapBackgroundPixels,overlapForegroundPixels:0,
+    frames:records,order:'row-major: F01..F08',perFrameTranslation:false,
+    poseWarp:false,interpolation:false,temporalInterpolation:false,
+    spatialResampling:true,resampling:{kernel:RESIZE_KERNEL,width:n,height:n,scaleX:n/s,scaleY:n/s,alphaAware:true},
+    preResizeRgbPreserved:true,sourceRgbPreserved:false,rgbModified:true,
+    rgbModificationNote:'Decoded source RGB is copied exactly during crop/keying; alpha-aware uniform spatial resampling changes runtime RGB. No recoloring or green de-spill is applied.',
+    alphaMethod:'Before resizing, alpha-only green chroma key: excess = G - max(R,B); preserve source alpha at excess <= 8, zero at >= 40, linear coverage between. Decoded source RGB stays unchanged until the whole RGBA cell is uniformly resampled.',
+    alphaKey:{excessOpaqueMax:8,excessTransparentMin:40,sourceAlphaPreservedOrReduced:true},
     alphaGroundTruthAvailable:false,sourceHasTiming:false,defaultCycleMs:1200,cycleMs:CYCLE_MS,
-    displayGroundExclusive:SOURCES[name].groundExclusive}};
+    displayGroundExclusive:spec.groundExclusive}};
 }

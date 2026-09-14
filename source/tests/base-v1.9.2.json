@@ -1,0 +1,18 @@
+{
+  "sourcePackage": "mknkDesktopCats_v1.9.2_Windows_x64.zip",
+  "requestedVersion": "1.8.1",
+  "exactRequestedVersionAvailable": false,
+  "actualBaseVersion": "1.9.2",
+  "resultVersion": "1.9.3",
+  "unchangedRuntimeFiles": {
+    "src/main.c": "c4f0bd53286a5307cdcc89c30391f5509ac0f4e6ccfd941dda293cce77e82784",
+    "src/pet_behavior.h": "0bbcc92715413487a932702fe01724893109748d31fbc45e373f13604a1e6dc3",
+    "src/reference_walk.h": "369ad0cc1a47aaf9f469c8f2c20c61e35aeb0e200cd9c67559793a5bf5949059",
+    "src/walk_animation.h": "d79677556416749f580d60f9f10aa76203d9dc4abf2adf726396a88f12f1d223",
+    "src/win32_min.h": "3d17c6f62118d9cd1f6aa4e9b19f76763394822c5477e043bdc52e8ace798c5e",
+    "src/version_ui.h": "3891c1451f663958534ea76112ff0b4fb90a4dfde78754edb3667ddca242ba4b",
+    "tools/import_rest.mjs": "2026a01b1c9e85bedbb7f94446d7c0c296918ad6e1fdefb46db9ed3011afbc07"
+  },
+  "settingsAndExeNameChanged": false,
+  "brandChanged": false
+}

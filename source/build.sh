@@ -8,6 +8,7 @@ node_bin="${CODEX_PRIMARY_RUNTIME_NODE:-node}"
 node_modules="${CODEX_PRIMARY_RUNTIME_NODE_MODULES:-}"
 
 mkdir -p "$build_dir/imports" "$build_dir/assets" "$dist_dir"
+python3 "$project_dir/tools/build_version.py"
 
 if [[ -n "$node_modules" ]]; then
   export NODE_PATH="$node_modules"
@@ -36,7 +37,7 @@ gcc -c -std=gnu11 -m64 -mabi=ms -mcmodel=large -mno-red-zone -fshort-wchar \
 
 ld -mi386pep --subsystem windows --entry WinMainCRTStartup --image-base 0x140000000 \
   --disable-runtime-pseudo-reloc --disable-auto-import --dynamicbase --nxcompat \
-  -o "$dist_dir/mknkDesktopCats.exe" "$build_dir/main.o" "$build_dir/sprites_blob.o" \
+  -o "$dist_dir/mknkDesktopCats.exe" "$build_dir/main.o" "$build_dir/sprites_blob.o" "$build_dir/version_resource.o" \
   "$build_dir/imports/libkernel32.a" "$build_dir/imports/libuser32.a" \
   "$build_dir/imports/libgdi32.a" "$build_dir/imports/libshell32.a" \
   "$build_dir/imports/libadvapi32.a"

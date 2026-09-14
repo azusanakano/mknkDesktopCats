@@ -1,7 +1,7 @@
 {
   "name": "mknk-desktop-cats-build",
   "private": true,
-  "version": "1.8.1",
+  "version": "1.9.3",
   "type": "module",
   "scripts": {
     "build": "bash build.sh",
