@@ -871,6 +871,131 @@
       "normal": 1200,
       "fast": 800
     },
-    "displayGroundExclusive": 349
+    "displayGroundExclusive": 349,
+    "walkCorrection": {
+      "forelegSourceFrames": [
+        5,
+        4,
+        3,
+        2,
+        1,
+        6,
+        7,
+        2
+      ],
+      "forelegPins": [
+        [
+          [
+            240,
+            268,
+            -10
+          ],
+          [
+            366,
+            340,
+            1
+          ]
+        ],
+        [
+          [
+            228,
+            250,
+            -16
+          ],
+          [
+            341,
+            330,
+            1
+          ]
+        ],
+        [
+          [
+            298,
+            320,
+            -3
+          ]
+        ],
+        [
+          [
+            277,
+            310,
+            1
+          ],
+          [
+            351,
+            350,
+            0
+          ]
+        ],
+        [
+          [
+            261,
+            300,
+            0
+          ],
+          [
+            383,
+            348,
+            2
+          ]
+        ],
+        [
+          [
+            309,
+            338,
+            -1
+          ]
+        ],
+        [
+          [
+            301,
+            328,
+            1
+          ]
+        ],
+        [
+          [
+            277,
+            318,
+            1
+          ],
+          [
+            351,
+            343,
+            -9
+          ]
+        ]
+      ],
+      "widthPreservedIn": [
+        1,
+        2
+      ],
+      "alteredRegion": {
+        "minX": 207,
+        "minY": 222
+      },
+      "bellyFur": {
+        "artwork": "overlays/onyankopon_belly_fur.png",
+        "width": 52,
+        "height": 29,
+        "rgbaSha256": "ce595a064167cd1c79b7e5ce74678e34d196f70053ae8640d9cf16062109f7f4",
+        "region": {
+          "minX": 192,
+          "maxX": 243,
+          "minY": 227,
+          "maxY": 273
+        }
+      },
+      "runtimeRgbaSha256": [
+        "83713f07384b7b4b9ea6c6de52df4b2905ab4dd8fa73500a0c9ca47a47204127",
+        "422189c931484768d9912081c7e326066f398310658e8852836697f8f95df0fc",
+        "3b90ec9712265d340eba4146d561dc68340e0e95e2fb8623f02ac028d7890983",
+        "af681aa79292eb7dfdc0f39a0df73aa8ba243e22e3a0c9cda48f486d8df53893",
+        "d14d97e8f557ef6a699d4bcaee3f26cdbbebb25c64b5a4541663dc9f7e087038",
+        "cb347e10e2c17812354a5f40b3031a2d001b141b1bfcb2050de5e07b28351b92",
+        "2ac1148cc1e72a306369a2446d3c870e59847f698503bf9216ab406a7dd20f0f",
+        "39954486e2c67f1de4305bca6641a786bb994ff4cf8e2217392e68879e4dc371"
+      ]
+    }
   }
 }

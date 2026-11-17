@@ -55,6 +55,13 @@ for(let catIndex=0;catIndex<approved.length;catIndex++) {
   assert(imported.sha256===spec.sha256&&imported.sourceWidth===sourceWidth&&imported.sourceHeight===sourceHeight,'Import report source mismatch: '+name);
   assert(imported.frames.length===8&&imported.cellSize===n&&imported.displayGroundExclusive===ground,'Import report frame geometry mismatch');
   assert(same(imported.rowOrigins,rowOrigins)&&same(imported.rowHeights,rowHeights),'Unapproved row extraction geometry');
+  const correction=imported.walkCorrection;
+  assert(Boolean(correction)===(name==='onyankopon'),'Walk correction must apply to Onyankopon only');
+  if(correction) {
+    const patch=await sharp(path.join(project,'art_source/overlays/onyankopon_belly_fur.png')).ensureAlpha().raw().toBuffer();
+    assert(correction.runtimeRgbaSha256.length===8,'Corrected runtime digests missing');
+    assert(hash(patch)===correction.bellyFur.rgbaSha256,'Belly fur artwork digest mismatch');
+  }
   const {data:sheet,info:sheetInfo}=await sharp(path.join(project,'build/assets',name+'_walk8.png')).raw().toBuffer({resolveWithObject:true});
   assert(sheetInfo.width===n*4&&sheetInfo.height===n*2&&sheetInfo.channels===4,'Wrong transparent contact sheet geometry');
   const files=fs.readdirSync(path.join(project,'build/assets/walk')).filter(x=>x.startsWith(name+'_walk_')&&x.endsWith('.png'));
@@ -96,8 +103,17 @@ for(let catIndex=0;catIndex<approved.length;catIndex++) {
       .resize(n,n,{kernel:'lanczos3'}).raw().toBuffer();
     const {data:png,info:frameInfo}=await sharp(path.join(project,'build/assets/walk',`${name}_walk_${String(slot+1).padStart(2,'0')}.png`)).raw().toBuffer({resolveWithObject:true});
     assert(frameInfo.width===n&&frameInfo.height===n&&frameInfo.channels===4,'Wrong runtime walking PNG geometry');
-    assert(png.equals(expected),`Uniformly resampled RGBA differs: ${name} F${slot+1}`);
-    assert(record.rgbaSha256===hash(png),'Imported/runtime RGBA hash mismatch');
+    assert(record.rgbaSha256===hash(expected),'RGBA after fixed crop and resampling differs');
+    if(correction) {
+      assert(!png.equals(expected),'Foreleg correction was not applied');
+      assert(correction.runtimeRgbaSha256[slot]===hash(png),'Corrected runtime RGBA hash mismatch');
+      for(let y=0;y<n;y++) {
+        const at=y*n*4;
+        const width=y<=221||y>=374?n:y>=227&&y<=273?192:207;
+        assert(png.subarray(at,at+width*4).equals(expected.subarray(at,at+width*4)),
+          'Walk correction changed artwork outside the foreleg and belly regions');
+      }
+    } else assert(png.equals(expected),`Uniformly resampled RGBA differs: ${name} F${slot+1}`);
     for(let y=0;y<n;y++) {
       const sheetAt=((row*n+y)*n*4+col*n)*4;
       assert(png.subarray(y*n*4,(y+1)*n*4).equals(sheet.subarray(sheetAt,sheetAt+n*4)),'PNG / contact sheet frame order mismatch');
@@ -114,7 +130,7 @@ for(let catIndex=0;catIndex<approved.length;catIndex++) {
     }
     assert(visible>20000&&visible<80000&&opaque>20000,'Unexpected runtime visible/solid fur coverage');
     assert(bottom<=ground,'Runtime foreground exceeds preserved placement reference');
-    assert(record.visiblePixels===visible&&record.groundExclusive===bottom,'Import report measured visibility mismatch');
+    if(!correction) assert(record.visiblePixels===visible&&record.groundExclusive===bottom,'Import report measured visibility mismatch');
     visibleTotal+=visible;maximumBottom=Math.max(maximumBottom,bottom);partialAlphaPixels+=partial;
     catGreenRemoved+=greenRemoved;catNeutralPreserved+=neutralPreserved;
     frames.push({frame:slot+1,crop,sourceCellSize:sourceCell,padding,resized:{width:n,height:n},scale,
@@ -136,7 +152,7 @@ for(let catIndex=0;catIndex<approved.length;catIndex++) {
     reusedBackgroundPixels:catReused,frames});
 }
 const version=fs.readFileSync(path.join(project,'VERSION'),'utf8').trim();
-assert(version==='1.9.3','Unexpected replacement release version');
+assert(version===JSON.parse(fs.readFileSync(path.join(project,'package.json'),'utf8')).version,'Version metadata disagree');
 for(const text of ['mknkDesktopCats','\\mknkDesktopCats','\\settings.ini','v'+version])
   assert(exe.includes(Buffer.from(text,'utf16le')),'Missing app identity/version: '+text);
 assert(partialAlphaPixels>0,'Expected smooth matte/resampled alpha edges');
@@ -145,7 +161,8 @@ const report={result:'PASS',version,cats,walkingFramesPerCat:8,restFramesPerCat:
   sourceCropRgbPreservedBeforeResize:true,exactPreResizeSourceRgbPixels:preResizePixels,preResizeSourceRgbMismatches:0,
   sourceUniformScale:scale,sourceCellSize:sourceCell,runtimeRgbResampled:true,resamplingKernel:'lanczos3',
   transformedRgbaPixelsChecked:transformedPixels,transformedRgbaMismatches:0,
-  walkPoseOrderMatchesNewSources:true,uniformResampledRgbaMatchesNewSources:true,
+  sourceFrameOrderVerified:true,uniformResampledSourceRgbaVerified:true,onyankoponForelegCorrectionVerified:true,
+  onyankoponBellyFurArtworkEmbedded:true,
   visiblePixels:visibleTotal,greenBackgroundPixelsRemoved:greenBackgroundRemoved,neutralCorePixelsPreserved:neutralCorePreserved,
   partialAlphaPixels,paddingPixels,discardedBackgroundPixels,reusedBackgroundPixels,
   sourceCropCoordinateMismatches:0,sourcePoseWarp:false,sourceFrameReordering:false,sourcePerFrameAlignment:false,

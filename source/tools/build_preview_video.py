@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -23,7 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 1440, 520
 FPS, SEGMENT_SECONDS = 30, 2.4
-GROUND_Y, SPEED = 391, 48.0
+GROUND_Y = 391
 SEQUENCE = ('walk', 'sit', 'sleep', 'stretch', 'walk')
 REST_ACTIONS = ('sit', 'sleep', 'stretch', 'paw', 'jump', 'alert')
 ACTION_LABELS = {
@@ -60,6 +61,22 @@ def load_cells(path: Path, report: dict) -> list[Image.Image]:
         ]
 
 
+def hold_forepaws(pose: Image.Image, direction: int, travel: int) -> Image.Image:
+    """Apply the same in-pose foreground sampling as the native compositor."""
+    if not travel:
+        return pose
+    result = pose.copy()
+    pixels = result.load()
+    n = pose.width
+    for y in range(236, 361):
+        offset = (travel * min(y - 235, 98) + 49) // 98
+        for x in range(207, n - offset):
+            shift = (offset * min(x - 206, 59) + 29) // 59
+            dest = x if direction > 0 else n - 1 - x
+            pixels[dest, y] = pixels[dest + direction * shift, y]
+    return result
+
+
 def main() -> None:
     source_root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
@@ -77,7 +94,10 @@ def main() -> None:
     asset = json.loads((artwork / 'asset-report.json').read_text())
     cell_size, sprite_count = asset['width'], asset['walkingFramesPerCat']
     cycle_ms = asset['cycleMs']['normal']
-    frame_count = round(FPS * SEGMENT_SECONDS * len(SEQUENCE))
+    segment_frames = round(FPS * SEGMENT_SECONDS)
+    frame_count = segment_frames * len(SEQUENCE)
+    walk_header = (source_root / 'src' / 'reference_walk.h').read_text()
+    stride = int(re.search(r'#define REFERENCE_STRIDE (\d+)u', walk_header)[1]) * cell_size
     if sprite_count != 8 or asset['framesPerCat'] != sprite_count + len(REST_ACTIONS):
         raise ValueError('Expected eight walking frames and six restored poses')
     cats = {}
@@ -111,30 +131,32 @@ def main() -> None:
     draw.rounded_rectangle((12, 81, WIDTH-12, 399), radius=18, fill='#fafcfb')
     draw.line((28, GROUND_Y, WIDTH - 28, GROUND_Y), fill='#c4d2c9', width=1)
     draw.line((28, 448, WIDTH - 28, 448), fill='#d1dbd5', width=1)
-    draw.text((29, 466), f"v{asset['version']} | New walking images + preserved resting poses. Rest poses are still images.",
+    draw.text((29, 466), f"v{asset['version']} | Onyankopon forepaw contact and loop. Rest poses are still images.",
               font=small_font, fill='#56695f')
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='mknk-walk-preview-') as scratch:
         temp_root = Path(scratch)
         for index in range(frame_count):
-            elapsed = index / FPS
-            segment = min(int(elapsed / SEGMENT_SECONDS), len(SEQUENCE) - 1)
+            segment, segment_frame = divmod(index, segment_frames)
             action = SEQUENCE[segment]
-            segment_elapsed = elapsed - segment * SEGMENT_SECONDS
-            walking_elapsed = sum(SEGMENT_SECONDS for previous in SEQUENCE[:segment]
-                                  if previous == 'walk')
+            walk_frames = SEQUENCE[:segment].count('walk') * segment_frames
             if action == 'walk':
-                walking_elapsed += segment_elapsed
-            slot = int(segment_elapsed * 1000 * sprite_count // cycle_ms) % sprite_count
+                walk_frames += segment_frame
+            poses_elapsed = walk_frames * 1000 * sprite_count // (FPS * cycle_ms)
+            slot = poses_elapsed % sprite_count
+            distance = walk_frames * 1000 * stride // (FPS * cycle_ms * 256)
+            pose_start = poses_elapsed * stride // (sprite_count * 256)
             canvas = base.copy()
             for name, x_start, direction, label in (
                 ('yuri', 16, 1, 'Yuri'),
                 ('onyankopon', WIDTH-cell_size-16, -1, 'Onyankopon'),
             ):
-                x = round(x_start + direction * SPEED * walking_elapsed)
+                x = x_start + direction * distance
                 bottom = (reports if action == 'walk' else rest_reports)[name]['displayGroundExclusive']
                 pose = cats[name]['walk'][slot] if action == 'walk' else cats[name]['rest'][action]
+                if name == 'onyankopon' and action == 'walk':
+                    pose = hold_forepaws(pose, direction, distance - pose_start)
                 canvas.alpha_composite(pose, (x, GROUND_Y - bottom))
                 ImageDraw.Draw(canvas).text((x + cell_size // 2, 412), label,
                                            anchor='mt', font=name_font, fill='#355448')

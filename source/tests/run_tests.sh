@@ -21,6 +21,7 @@ gcc -std=gnu11 -O2 -fshort-wchar -ffunction-sections -fdata-sections -Wl,--gc-se
 "$project_dir/build/version_ui_test"
 "$node_bin" "$project_dir/tests/verify_assets.mjs" "$project_dir/build/assets/sprites.rle"
 "$node_bin" "$project_dir/tests/verify_reference.mjs" "$project_dir" "${1:-}"
+"$node_bin" "$project_dir/tests/verify_onyankopon_walk.mjs"
 "$node_bin" "$project_dir/tests/verify_rest.mjs" "$project_dir"
 "$node_bin" "$project_dir/tests/verify_preserved.mjs" "$project_dir"
 python3 "$project_dir/tests/verify_version.py" "$project_dir"

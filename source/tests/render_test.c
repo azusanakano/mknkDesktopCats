@@ -148,11 +148,31 @@ int main(void) {
     assert(pet.renderedFrame == pet.frame);
   }
   assert(pet.x == 100 + 48 * g_sizes[g_settings.sizeIndex] / 256);
-  /* Continuous translation can move without replacing the current pose. */
-  int oldFrame = pet.frame, oldX = pet.x, oldUploads = uploads, oldMoves = moves;
-  update_reference_walk(&pet, 33); render_pet(&pet);
-  assert(pet.frame == oldFrame && pet.x > oldX);
-  assert(uploads == oldUploads && moves == oldMoves + 1);
+  /* A held Onyankopon pose keeps the front foot on the desktop as
+     the window moves. Check the real compositor in both directions. */
+  for (int dir = -1; dir <= 1; dir += 2) {
+    for (int si = 0; si < 3; si++) {
+      g_settings.sizeIndex = si;
+      int size = g_sizes[si], foot = 3 * size / 4, floor = 81 * size / 100;
+      int x = dir > 0 ? foot : size - 1 - foot;
+      pet.direction = dir;
+      pet.reference = (ReferenceWalk){0};
+      render_pet(&pet);
+      int oldFrame = pet.frame, oldX = pet.x, oldUploads = uploads, oldMoves = moves;
+      BYTE paw = pet.pixels[(floor * size + x) * 4];
+      update_reference_walk(&pet, 55); render_pet(&pet);
+      int moved = (pet.x - oldX) * dir;
+      assert(pet.frame == oldFrame && moved > 0);
+      if (cat == 0) {
+        assert(uploads == oldUploads && moves == oldMoves + 1);
+      } else {
+        assert(uploads == oldUploads + 1 && moves == oldMoves);
+        assert(pet.pixels[(floor * size + x - dir * moved) * 4] == paw);
+        assert(pet.pixels[x * 4] == (BYTE)((dir > 0 ? x * SOURCE_W / size
+                                      : SOURCE_W - 1 - x * SOURCE_W / size)));
+      }
+    }
+  }
   /* Resting never advances the walking clock or drifts horizontally; pause,
      hide/fullscreen and dragging freeze BOTH state duration and gait phase. */
   const int restStates[] = {STATE_SIT, STATE_SLEEP, STATE_STRETCH, STATE_PAW, STATE_JUMP, STATE_ALERT};

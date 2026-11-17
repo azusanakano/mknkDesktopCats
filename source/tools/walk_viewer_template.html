@@ -7,7 +7,7 @@
 </style></head><body><main>
 <p class="brand">ネコシステム社 / mknkDesktopCats</p>
 <h1>歩く、座る、くつろぐ。<span class="badge">v__APP_VERSION__</span></h1>
-<p class="sub">ゆりちゃんとオニャンコポンの新しい歩行8コマと、復元した6つの姿勢を確かめられます。</p>
+<p class="sub">オニャンコポンの前足とループを調整した歩行を、8コマで確かめられます。</p>
 <div class="options"><label>動作 <select id="action" disabled><option value="walk">歩く · 8コマ</option><option value="sit">座る</option><option value="sleep">眠る</option><option value="stretch">伸びをする</option><option value="paw">前足を上げる</option><option value="jump">ジャンプの姿勢</option><option value="alert">見上げる</option></select></label><span id="action-note">新しい歩行画像を再生中</span></div>
 <div class="panels">
 <section class="panel"><h2><span class="dot"></span>ゆりちゃん</h2><div class="stage"><canvas id="yuri" width="1" height="1" aria-label="ゆりちゃんの歩行"></canvas></div><div id="yuri-frames" class="frames"></div></section>
@@ -19,7 +19,7 @@
 <details id="comparison"><summary>元画像の同じコマと比較する</summary><div class="originals"><div><div class="stage"><canvas id="yuri-original" width="1" height="1" aria-label="ゆりちゃんの元画像"></canvas></div><p>ゆりちゃん · 添付JPEGの同じコマ</p></div><div><div class="stage"><canvas id="onyankopon-original" width="1" height="1" aria-label="オニャンコポンの元画像"></canvas></div><p>オニャンコポン · 添付JPEGの同じコマ</p></div></div></details>
 <details><summary>添付された元画像を全体表示する</summary><div class="originals"><div><img id="yuri-source-sheet" class="original-sheet" alt="ゆりちゃんの添付JPEG全体・左上から行順の8コマ"><p>ゆりちゃん · 元画像の縦横比を保持</p></div><div><img id="onyankopon-source-sheet" class="original-sheet" alt="オニャンコポンの添付JPEG全体・左上から行順の8コマ"><p>オニャンコポン · 元画像の縦横比を保持</p></div></div></details>
 <p id="error" class="error" role="alert"></p>
-<p class="note">歩行は F01 → F08 → F01 の順に再生します。左右キーでコマ送り、スペースキーで再生・一時停止ができます。<br>歩行には添付された新しいJPEGの8コマ、座る・眠るなどには旧版から復元した6姿勢を使っています。復元姿勢は静止画で表示します。歩行の姿勢とコマ順を保持し、緑背景を透過させて、8コマ共通の倍率で表示サイズを合わせています。輪郭に細い緑の縁が残る場合があります。<br>インターネット接続は不要です。このページは素材のプレビューです。Windowsアプリの実画面、動作が自動で切り替わる様子、ジャンプの移動は再現していません。</p>
+<p class="note">歩行は F01 から F08 まで進み、F01 に戻ります。左右キーでコマ送り、スペースキーで再生・一時停止ができます。<br>ゆりちゃんは原画の行順、オニャンコポンは前足を補正した表示用の8コマです。原画欄には取り込み元を行順で表示します。<br>このページはその場での素材再生です。実際の横移動と接地補正は、同梱の動画で確認できます。</p>
 </main><script>
 'use strict';
 const data=__IMAGE_DATA__,config=__VIEWER_CONFIG__,el=id=>document.getElementById(id),buttons=[];

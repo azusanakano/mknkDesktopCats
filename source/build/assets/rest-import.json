@@ -1,0 +1,512 @@
+{
+  "yuri": {
+    "name": "yuri",
+    "source": "yuri_green.png",
+    "sha256": "772171219af97671b62e5d0ae758aca1edf29dbce4e393db5bad31d79d482307",
+    "sourceVersion": "1.3.1",
+    "sourceWidth": 1448,
+    "sourceHeight": 1086,
+    "cellSize": 425,
+    "displayGroundExclusive": 349,
+    "wholeImageScale": 1.025,
+    "sourcePosePreserved": true,
+    "wholeImagePlacement": true,
+    "poseWarp": false,
+    "newArtwork": false,
+    "originalRuntimeCropTruncationCorrected": true,
+    "alphaGroundTruthAvailable": false,
+    "alphaMethod": "Original v1.3.1 green-screen key, largest foreground component cleanup, and edge green decontamination.",
+    "displayScaleNote": "Fixed per-cat whole-body scale approximates current walk body height; historical artwork retains its original fur pattern and drawing style.",
+    "frames": [
+      {
+        "action": "sit",
+        "legacyFrame": 4,
+        "runtimeFrame": 8,
+        "sourceRect": {
+          "left": 106,
+          "top": 377,
+          "width": 200,
+          "height": 294
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 195,
+          "maxY": 289,
+          "width": 192,
+          "height": 286,
+          "visiblePixels": 37169
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "43e58422b1ec4ab27c0c94cacc0d2179d729a05eabad99e402a783175e110e29",
+        "outputPlacement": {
+          "left": 110,
+          "top": 51,
+          "width": 205,
+          "height": 301
+        },
+        "outputBounds": {
+          "minX": 114,
+          "minY": 55,
+          "maxX": 311,
+          "maxY": 348,
+          "width": 198,
+          "height": 294,
+          "visiblePixels": 39498
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "994d4e7bc4acc40c0606bf78247b72361c03066b4f57443eea575185d9efac91"
+      },
+      {
+        "action": "sleep",
+        "legacyFrame": 5,
+        "runtimeFrame": 9,
+        "sourceRect": {
+          "left": 364,
+          "top": 474,
+          "width": 307,
+          "height": 185
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 302,
+          "maxY": 180,
+          "width": 299,
+          "height": 177,
+          "visiblePixels": 39594
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "987f8f27bf7260abe236b3bfd655b3ca45c00fc37ac40bd3d5daaaca70fb721f",
+        "outputPlacement": {
+          "left": 55,
+          "top": 162,
+          "width": 315,
+          "height": 190
+        },
+        "outputBounds": {
+          "minX": 59,
+          "minY": 166,
+          "maxX": 366,
+          "maxY": 348,
+          "width": 308,
+          "height": 183,
+          "visiblePixels": 42227
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "e456afa0a784c4b69a434912d9365b365b78fd4e4c7b37031a27c625d4b2c6ee"
+      },
+      {
+        "action": "stretch",
+        "legacyFrame": 6,
+        "runtimeFrame": 10,
+        "sourceRect": {
+          "left": 677,
+          "top": 373,
+          "width": 364,
+          "height": 312
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 359,
+          "maxY": 307,
+          "width": 356,
+          "height": 304,
+          "visiblePixels": 42613
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "bddba658bd6af37f5a98287c67477e98bb7f170fbcd2e3825f67212eec60bc99",
+        "outputPlacement": {
+          "left": 26,
+          "top": 32,
+          "width": 373,
+          "height": 320
+        },
+        "outputBounds": {
+          "minX": 30,
+          "minY": 35,
+          "maxX": 395,
+          "maxY": 348,
+          "width": 366,
+          "height": 314,
+          "visiblePixels": 45499
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "eb71da55c7d21ee41b5f37911cc198efe9c6fb40c89f5cea558cc234bf543b14"
+      },
+      {
+        "action": "paw",
+        "legacyFrame": 7,
+        "runtimeFrame": 11,
+        "sourceRect": {
+          "left": 1118,
+          "top": 428,
+          "width": 272,
+          "height": 245
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 267,
+          "maxY": 240,
+          "width": 264,
+          "height": 237,
+          "visiblePixels": 41246
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "08dee5e7e18983b735819a23af13f9ea498f3a62d84e9ea26b1d039b43bd63a4",
+        "outputPlacement": {
+          "left": 73,
+          "top": 101,
+          "width": 279,
+          "height": 251
+        },
+        "outputBounds": {
+          "minX": 77,
+          "minY": 105,
+          "maxX": 348,
+          "maxY": 348,
+          "width": 272,
+          "height": 244,
+          "visiblePixels": 43927
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "862dc00804cb8825c9ae0c76c6719f9fc9dc0a935b11ec8a4e24f0c5462c42ca"
+      },
+      {
+        "action": "jump",
+        "legacyFrame": 8,
+        "runtimeFrame": 12,
+        "sourceRect": {
+          "left": 24,
+          "top": 718,
+          "width": 286,
+          "height": 264
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 281,
+          "maxY": 259,
+          "width": 278,
+          "height": 256,
+          "visiblePixels": 32395
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "869447af25549ef17b7bec27b687fdc2ba89b9e6a65b6e262265e729bfc2ae12",
+        "outputPlacement": {
+          "left": 66,
+          "top": 81,
+          "width": 293,
+          "height": 271
+        },
+        "outputBounds": {
+          "minX": 70,
+          "minY": 85,
+          "maxX": 355,
+          "maxY": 348,
+          "width": 286,
+          "height": 264,
+          "visiblePixels": 34623
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "495f9568291cec74951cc0fe55b696b84c08f3cd3c02d1a6ffff3de920841d24"
+      },
+      {
+        "action": "alert",
+        "legacyFrame": 9,
+        "runtimeFrame": 13,
+        "sourceRect": {
+          "left": 322,
+          "top": 721,
+          "width": 314,
+          "height": 278
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 309,
+          "maxY": 273,
+          "width": 306,
+          "height": 270,
+          "visiblePixels": 42301
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "28a19d8ef03dfb5477d3eb774ae9267180add5814b54e55db49e509bf0de5d49",
+        "outputPlacement": {
+          "left": 52,
+          "top": 67,
+          "width": 322,
+          "height": 285
+        },
+        "outputBounds": {
+          "minX": 56,
+          "minY": 70,
+          "maxX": 369,
+          "maxY": 348,
+          "width": 314,
+          "height": 279,
+          "visiblePixels": 45176
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "a42d5e3cfe508d62bb957bccc7cf1bfa120202bace2bfdb45928be25504b4aba"
+      }
+    ]
+  },
+  "onyankopon": {
+    "name": "onyankopon",
+    "source": "onyankopon_green.png",
+    "sha256": "781c359d466ae83fa1521149ec5c951e1ebe2314d39e3e9cd8f3a39a09b614a5",
+    "sourceVersion": "1.3.1",
+    "sourceWidth": 1448,
+    "sourceHeight": 1086,
+    "cellSize": 425,
+    "displayGroundExclusive": 349,
+    "wholeImageScale": 1.08,
+    "sourcePosePreserved": true,
+    "wholeImagePlacement": true,
+    "poseWarp": false,
+    "newArtwork": false,
+    "originalRuntimeCropTruncationCorrected": true,
+    "alphaGroundTruthAvailable": false,
+    "alphaMethod": "Original v1.3.1 green-screen key, largest foreground component cleanup, and edge green decontamination.",
+    "displayScaleNote": "Fixed per-cat whole-body scale approximates current walk body height; historical artwork retains its original fur pattern and drawing style.",
+    "frames": [
+      {
+        "action": "sit",
+        "legacyFrame": 4,
+        "runtimeFrame": 8,
+        "sourceRect": {
+          "left": 103,
+          "top": 365,
+          "width": 179,
+          "height": 295
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 174,
+          "maxY": 290,
+          "width": 171,
+          "height": 287,
+          "visiblePixels": 33011
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "5e608e068f43e2d00217a863702f3aab734b9436861d4e5f54075da3f7f1663e",
+        "outputPlacement": {
+          "left": 116,
+          "top": 33,
+          "width": 193,
+          "height": 319
+        },
+        "outputBounds": {
+          "minX": 120,
+          "minY": 37,
+          "maxX": 304,
+          "maxY": 348,
+          "width": 185,
+          "height": 312,
+          "visiblePixels": 38998
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "20c13e9a80fa8fbe5e915f2190de9b79b94a5bffa94d5ac09c32469378b642c7"
+      },
+      {
+        "action": "sleep",
+        "legacyFrame": 5,
+        "runtimeFrame": 9,
+        "sourceRect": {
+          "left": 374,
+          "top": 488,
+          "width": 284,
+          "height": 167
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 279,
+          "maxY": 162,
+          "width": 276,
+          "height": 159,
+          "visiblePixels": 32998
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "9851cf95bcf1ad28a9bfa673d1cf024cc2d01b5e867dcf359b0f729cd4f1dab2",
+        "outputPlacement": {
+          "left": 59,
+          "top": 172,
+          "width": 307,
+          "height": 180
+        },
+        "outputBounds": {
+          "minX": 63,
+          "minY": 176,
+          "maxX": 362,
+          "maxY": 348,
+          "width": 300,
+          "height": 173,
+          "visiblePixels": 38870
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "f8ceb58c634d9e2cc79f03973c06fe1b6ddb88fdbe995fb6bd4f538c21d4a402"
+      },
+      {
+        "action": "stretch",
+        "legacyFrame": 6,
+        "runtimeFrame": 10,
+        "sourceRect": {
+          "left": 691,
+          "top": 371,
+          "width": 382,
+          "height": 303
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 377,
+          "maxY": 298,
+          "width": 374,
+          "height": 295,
+          "visiblePixels": 41839
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "09d254fbc9307e85d9d56cd7689f2f0cc928034823a1202bcbf3bee94b62d316",
+        "outputPlacement": {
+          "left": 6,
+          "top": 25,
+          "width": 413,
+          "height": 327
+        },
+        "outputBounds": {
+          "minX": 10,
+          "minY": 29,
+          "maxX": 415,
+          "maxY": 348,
+          "width": 406,
+          "height": 320,
+          "visiblePixels": 49640
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "d3e8c694219ceb66957e2f5107c9437e32462477d72f58ab07e19ca880d92bae"
+      },
+      {
+        "action": "paw",
+        "legacyFrame": 7,
+        "runtimeFrame": 11,
+        "sourceRect": {
+          "left": 1123,
+          "top": 432,
+          "width": 298,
+          "height": 228
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 293,
+          "maxY": 223,
+          "width": 290,
+          "height": 220,
+          "visiblePixels": 35335
+        },
+        "removedDetachedPixels": 15,
+        "keyedCropRgbaSha256": "7f02679bad6e21cedcb5de785f0352035882586b53badd552db01c35ff3e5c7c",
+        "outputPlacement": {
+          "left": 51,
+          "top": 106,
+          "width": 322,
+          "height": 246
+        },
+        "outputBounds": {
+          "minX": 56,
+          "minY": 110,
+          "maxX": 369,
+          "maxY": 348,
+          "width": 314,
+          "height": 239,
+          "visiblePixels": 41833
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "b624cc87f45823c2663f999c5c19ce36d4aff7b5062fe442ac864a4fdd376923"
+      },
+      {
+        "action": "jump",
+        "legacyFrame": 8,
+        "runtimeFrame": 12,
+        "sourceRect": {
+          "left": 47,
+          "top": 701,
+          "width": 264,
+          "height": 249
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 259,
+          "maxY": 244,
+          "width": 256,
+          "height": 241,
+          "visiblePixels": 24307
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "57e9a45ebc232b044b8d8182f1c3b43c5b9d6129c785fa44b0102e94b536bd87",
+        "outputPlacement": {
+          "left": 70,
+          "top": 83,
+          "width": 285,
+          "height": 269
+        },
+        "outputBounds": {
+          "minX": 74,
+          "minY": 87,
+          "maxX": 351,
+          "maxY": 348,
+          "width": 278,
+          "height": 262,
+          "visiblePixels": 28947
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "b000f194aefa751fb2612467cebea3a67f3c6bb29c24b62fb2f47cb5bf67cc6b"
+      },
+      {
+        "action": "alert",
+        "legacyFrame": 9,
+        "runtimeFrame": 13,
+        "sourceRect": {
+          "left": 422,
+          "top": 704,
+          "width": 223,
+          "height": 288
+        },
+        "sourceBounds": {
+          "minX": 4,
+          "minY": 4,
+          "maxX": 218,
+          "maxY": 283,
+          "width": 215,
+          "height": 280,
+          "visiblePixels": 35683
+        },
+        "removedDetachedPixels": 0,
+        "keyedCropRgbaSha256": "41373d3691b0a0e1a895a76292b7aa4534ca60c8de707d3c8f6237dd39f4f7dc",
+        "outputPlacement": {
+          "left": 92,
+          "top": 41,
+          "width": 241,
+          "height": 311
+        },
+        "outputBounds": {
+          "minX": 96,
+          "minY": 45,
+          "maxX": 329,
+          "maxY": 348,
+          "width": 234,
+          "height": 304,
+          "visiblePixels": 42417
+        },
+        "groundExclusive": 349,
+        "rgbaSha256": "4bccd1d394c0ba2c7acf8200cf785056c615ae4e6e4d2623bca2802ae6c9f2cd"
+      }
+    ]
+  }
+}

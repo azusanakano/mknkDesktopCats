@@ -1,5 +1,5 @@
 {
-  "version": "1.9.3",
+  "version": "1.9.4",
   "width": 425,
   "height": 425,
   "cats": 2,
@@ -21,7 +21,7 @@
     "normal": 1200,
     "fast": 800
   },
-  "encodedBytes": 5158657,
+  "encodedBytes": 5178228,
   "uncompressedBytes": 20230000,
   "originalSourceBytesPreserved": true,
   "sourceRgbPreserved": false,

@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {importReference,SOURCES,CELL_SIZE,FRAME_COUNT,CYCLE_MS} from './import_reference.mjs';
 import {importRest,REST_COUNT,REST_ACTIONS} from './import_rest.mjs';
+import {correctOnyankoponWalk, onyankoponWalkReport} from './onyankopon_walk.mjs';
 const require=createRequire(import.meta.url);
 const sharp=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'sharp')):require('sharp');
@@ -11,6 +12,10 @@ if(!sourceDir||!outputDir) throw new Error('usage: build_assets.mjs <reference-d
 const n=CELL_SIZE,frames=[],reports={},restReports={};
 const totalFrames=FRAME_COUNT+REST_COUNT;
 const restDir=path.join(path.dirname(sourceDir),'rest');
+const bellyPath=path.join(path.dirname(sourceDir),'overlays','onyankopon_belly_fur.png');
+const {data:bellyPixels,info:bellyInfo}=await sharp(bellyPath).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+const belly={pixels:bellyPixels,width:bellyInfo.width,height:bellyInfo.height};
+if(belly.width!==52||belly.height!==29) throw new Error('Unexpected Onyankopon belly artwork dimensions');
 for(const dir of [outputDir,path.join(outputDir,'walk'),path.join(outputDir,'rest')]) fs.mkdirSync(dir,{recursive:true});
 function writeComplete(file,bytes) {
   const temporary=file+'.tmp';
@@ -44,14 +49,16 @@ function encode(rgba) {
 }
 for(const name of Object.keys(SOURCES)) {
   const sourcePath=path.join(sourceDir,SOURCES[name].file);
-  const {cells,report}=await importReference(sharp,sourcePath,name);
+  const {cells: sourceCells,report}=await importReference(sharp,sourcePath,name);
+  const cells=name==='onyankopon'?correctOnyankoponWalk(sourceCells,n,belly):sourceCells;
+  if(name==='onyankopon') report.walkCorrection=onyankoponWalkReport(cells,belly);
   for(let slot=0;slot<FRAME_COUNT;slot++) {
     const png=await sharp(cells[slot],{raw:{width:n,height:n,channels:4}})
       .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
     writeComplete(path.join(outputDir,'walk',`${name}_walk_${String(slot+1).padStart(2,'0')}.png`),png);
     frames.push(encode(cells[slot]));
   }
-  // Assemble fixed cells without moving them or changing any decoded RGB.
+  // Assemble the exact frames used by the executable.
   const sheet=Buffer.alloc(n*4*n*2*4);
   for(let slot=0;slot<FRAME_COUNT;slot++) for(let y=0;y<n;y++) {
     const dest=((Math.floor(slot/4)*n+y)*n*4+(slot%4)*n)*4;

@@ -2,6 +2,7 @@
 #include "walk_animation.h"
 #include "reference_walk.h"
 #include "pet_behavior.h"
+#include "onyankopon_walk.h"
 
 #define W(x) ((const WCHAR*)L##x)
 #define PET_COUNT 2
@@ -29,6 +30,7 @@ typedef struct Pet {
   int renderedFrame;
   int renderedDirection;
   int renderedHearts;
+  int renderedPawShift;
   int renderedX;
   int renderedY;
   int baseY;
@@ -367,7 +369,7 @@ static void draw_heart(Pet* pet, int centerX, int topY, int scale, BYTE red, BYT
 }
 
 static void render_pet(Pet* pet) {
-  int size, frame, hearts, sameContent;
+  int size, frame, hearts, pawShift, sameContent;
   POINT destination;
   POINT sourcePoint = {0, 0};
   SIZE windowSize;
@@ -378,11 +380,13 @@ static void render_pet(Pet* pet) {
     if (!create_pet_surface(pet, size)) return;
   }
   frame = int_clamp(pet->frame, 0, FRAME_COUNT - 1);
+  pawShift = pet->id == 1 && frame < FRAME_SIT ? onyankopon_paw_shift(&pet->reference, (unsigned int)size) : 0;
   destination.x = pet->x;
   destination.y = pet->y;
   hearts = pet->loveTicks > 0 ? 1 : 0;
   sameContent = pet->rendered && pet->renderedFrame == frame &&
-                pet->renderedDirection == pet->direction && pet->renderedHearts == hearts;
+                pet->renderedDirection == pet->direction && pet->renderedHearts == hearts &&
+                pet->renderedPawShift == pawShift;
   if (sameContent) {
     if (pet->renderedX == destination.x && pet->renderedY == destination.y) return;
     /* Microsoft documents NULL source, size, blend and zero flags for a
@@ -401,6 +405,7 @@ static void render_pet(Pet* pet) {
   } else {
     scale_sprite(pet->pixels, g_frames[pet->id][frame], size, pet->direction);
   }
+  if (pawShift) onyankopon_hold_forepaws(pet->pixels, size, pet->direction, pawShift);
   if (hearts & 1) {
     int scale = size >= 270 ? 2 : 1;
     draw_heart(pet, size / 2, 8, scale, 255, 92, 156);
@@ -413,6 +418,7 @@ static void render_pet(Pet* pet) {
     pet->renderedFrame = frame;
     pet->renderedDirection = pet->direction;
     pet->renderedHearts = hearts;
+    pet->renderedPawShift = pawShift;
     pet->renderedX = destination.x;
     pet->renderedY = destination.y;
   }

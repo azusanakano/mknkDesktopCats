@@ -1,58 +1,22 @@
-mknkDesktopCats v1.9.3 — 2026-09-14
+mknkDesktopCats v1.9.4 — 2026-11-17
 Windows x64 / ネコシステム社
 
-今回の変更:
-添付JPEG2枚から各8コマの歩行画像を差し替え。
-指定の1.8.1本体は取得できず、取得できた後継1.9.2を土台とした。
-歩行以外の12枚、動作・設定・EXE名・ブランドは1.9.2から維持。
-原画JPEGは無変更。緑背景からアルファを推定し、固定行切り出しを行い、
-すべて512pxセルから共通倍率425/512で縮小。中間姿勢・個別脚変形なし。
+オニャンコポンの歩行8コマを更新
+・F01・F02の前足の幅を元絵の輪郭に合わせた。
+・コマ間とコマ内の前足を画面の移動量に合わせて補正した。
+・F08で上げた前足をF01で着地させた。
+・組み込みのImageGenに、茶トラの体と姿勢を保ちながら、腹下だけをゆりちゃんと同程度の毛足にするよう指定した。
+  生成結果から腹毛を切り出し、8コマの腹下に合成した。
 
-確認済み:
-- Windows x64 PEのビルド、既存ホストテスト、画像埋め込み、版情報。
-- 新しい歩行16枚は原画ハッシュ・切り出し・共通縮小結果を検証。
-- 動作等の7ソースファイルは取得済み1.9.2とバイト単位で同一。
-- 休息PNG12枚とRGBA・取り込み条件は従来と同一。
-- 全28枚のPNGとEXEの乗算済みBGRAデータの一致。
-- 再生順・3速度・停止/非表示/ドラッグ・座る/眠る/伸び・キャッシュは
-  Windows APIをスタブ化したホストテストを含む既存テストに合格。
-- HTMLプレビュー再生成・JavaScript構文検査。
-- MP4素材プレビュー再生成。
-- 歩行16枚の明暗背景での目視: 全身・尾・足先を確認。
+検証
+・Windows用のMSVCとSDKでWindows x64 EXEをビルド。Bashのビルド環境がないため、同じC・Node.js・PythonのテストをWindowsから個別に実行した。
+・3サイズと左右両方向の描画、前足の幅、接地、ループ、ゆりちゃんと比較した腹下の深さの検証に合格。
+・前足のコマ間の接地ずれは425pxの素材座標で最大1.6px。
+・28枚の画像、原画JPEG、他の歩行・休息画像、版情報、Windows DLLの依存関係を確認した。
+・Windows上で標準224pxのオニャンコポンを起動し、歩行中の位置を読み取った。x座標450から314まで移動し、y座標290を維持した。
+・HTMLプレビューの構文と埋め込み画像を確認した。MP4はWindows Media Foundationでエンコード・復号し、向きとサイズを確認した。
+・CPU使用率は未測定。
 
-未確認:
-Windows実機の起動・操作、CPU使用率、Explorerの表示。
-HTMLのブラウザー実操作。MP4は素材デモでありWindowsの録画ではない。
-透明度は推定。元画像の姿勢・ループのつながりは原画由来。
-元JPEGの圧縮は実行していない。PNG派生素材は可逆PNGエンコード。
-
-ビルドコマンド: bash source/build.sh
-検証コマンド: bash source/tests/run_tests.sh
-
-検証ログ:
-BITMAPINFOHEADER=40 BITMAPINFO=44 WNDCLASSEXW=80 MSG=48 CREATESTRUCTW=80 MONITORINFO=40 GUID=16 NOTIFYICONDATAW=976
-animation: both cats reach every F01..F08 pose in order at all speeds PASS
-behavior: all six restored poses, exact walk mapping, autonomous recovery, sleep-to-stretch, jump bounds and deterministic seeds PASS
-reference: F01..F08 order/loop, 3 speeds, timer stalls, speed continuity, continuous movement, scaled stride PASS
-renderer: both cats; all sizes/directions, all14 cached poses, move-only updates, hearts, pause/hide/drag clocks, stationary rest, sleep/stretch/walk recovery, action menus, encounters, adaptive idle timer PASS
-version UI: About dispatch, version text, owner, information flag, and no state changes PASS
-{
-  "result": "PASS",
-  "width": 425,
-  "height": 425,
-  "cats": 2,
-  "framesPerCat": 14,
-  "walkingFramesPerCat": 8,
-  "restFramesPerCat": 6,
-  "uniqueFrames": 28,
-  "encodedBytes": 5158657,
-  "premultipliedPixelsChecked": 5057500,
-  "minCoverage": 0.16026020761245674,
-  "maxCoverage": 0.29946020761245673
-}
-{"result":"PASS","cats":2,"framesPerCat":8,"originalSourceBytesVerified":true,"exactPreResizeSourceRgbPixels":4192256,"transformedRgbaPixelsChecked":2890000,"transformedRgbaMismatches":0,"runtimeRgbResampled":true,"resamplingKernel":"lanczos3","discardedBackgroundPixels":102400,"reusedBackgroundPixels":124928,"alphaEstimated":true,"embeddedAssetBytesVerified":5158657}
-{"result":"PASS","restoredFrames":12,"pixelsChecked":2167500,"independentSourceCoreSamples":6353,"groundExclusive":349}
-{"result":"PASS","logicFilesChecked":8,"mainCodeChange":"version labels and About-menu integration only","restPngFilesByteIdentical":12,"allRestRgbaAndImportParametersUnchanged":true,"walkTimingAndMotionLogicUnchanged":true,"behaviorAndSettingsCodeUnchanged":true}
-{"result": "PASS", "productVersion": "1.9.3", "fileVersion": "1.9.3.0", "resourceLanguage": "Japanese/Unicode", "resourceRvaValid": true, "current28ImageBundleEmbedded": true, "runtimeVersionLabelsPresent": true, "windowsExplorerTested": false}
-{'machine': '0x8664', 'sections': 11, 'entry_rva': '0x41c0', 'subsystem': 2, 'dll_characteristics': '0x160', 'size_bytes': 5186048}
-all static tests passed
+修正版の実行ファイル  source/dist/mknkDesktopCats.exe
+SHA-256  41ad0d64f04ac9810674ff04887b673eb401d4bb650d84fe2737f904bb7b3f79
+ルートの実行ファイルはWindowsのファイルロックにより差し替えできなかった。

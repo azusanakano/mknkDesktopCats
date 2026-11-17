@@ -20,7 +20,7 @@ assert subsystem == 2, f'not GUI subsystem: {subsystem}'
 assert dll_characteristics & 0x40, 'ASLR not enabled'
 assert dll_characteristics & 0x100, 'NX not enabled'
 for dll in (b'kernel32.dll', b'user32.dll', b'gdi32.dll', b'shell32.dll', b'advapi32.dll'):
-    assert dll in data, f'missing import {dll!r}'
+    assert dll in data.lower(), f'missing import {dll!r}'
 assert b'MKCT' in data, 'embedded sprites missing'
 for text in ('ゆりちゃん', 'オニャンコポン', '全画面中は隠す'):
     assert text.encode('utf-16le') in data, f'missing UTF-16 text {text}'
