@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preview eight supplied walking frames and restored original resting poses.
+"""Preview the walking cycles and restored original resting poses.
 
 This is an asset demonstration, not a recording of the Windows application.
 
@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 WIDTH, HEIGHT = 1440, 520
 FPS, SEGMENT_SECONDS = 30, 2.4
+DISPLAY_SIZE = 224
 GROUND_Y = 391
 SEQUENCE = ('walk', 'sit', 'sleep', 'stretch', 'walk')
 REST_ACTIONS = ('sit', 'sleep', 'stretch', 'paw', 'jump', 'alert')
@@ -48,32 +49,26 @@ def font(size: int, bold: bool = False):
     return ImageFont.load_default(size=size)
 
 
-def load_cells(path: Path, report: dict) -> list[Image.Image]:
-    n, columns = report['cellSize'], report['columns']
-    expected_size = (n * columns, n * report['rows'])
+def load_cells(path: Path, n: int, columns: int, count: int) -> list[Image.Image]:
+    expected_size = (n * columns, n * ((count + columns - 1) // columns))
     with Image.open(path) as sheet:
         if sheet.mode != 'RGBA' or sheet.size != expected_size:
             raise ValueError(f'Expected prepared {expected_size} RGBA sheet: {path}')
         return [
             sheet.crop(((i % columns) * n, (i // columns) * n,
                         (i % columns + 1) * n, (i // columns + 1) * n))
-            for i in range(len(report['frames']))
+            for i in range(count)
         ]
 
 
-def hold_forepaws(pose: Image.Image, direction: int, travel: int) -> Image.Image:
-    """Apply the same in-pose foreground sampling as the native compositor."""
-    if not travel:
-        return pose
-    result = pose.copy()
-    pixels = result.load()
-    n = pose.width
-    for y in range(236, 361):
-        offset = (travel * min(y - 235, 98) + 49) // 98
-        for x in range(207, n - offset):
-            shift = (offset * min(x - 206, 59) + 29) // 59
-            dest = x if direction > 0 else n - 1 - x
-            pixels[dest, y] = pixels[dest + direction * shift, y]
+def native_size(pose: Image.Image, mirrored: bool) -> Image.Image:
+    """Use the desktop renderer's source pixel centres and default canvas."""
+    source = pose.load()
+    side = pose.width
+    indices = [i * side // DISPLAY_SIZE for i in range(DISPLAY_SIZE)]
+    x_indices = [side - 1 - i for i in indices] if mirrored else indices
+    result = Image.new('RGBA', (DISPLAY_SIZE, DISPLAY_SIZE))
+    result.putdata([source[x, y] for y in indices for x in x_indices])
     return result
 
 
@@ -97,7 +92,7 @@ def main() -> None:
     segment_frames = round(FPS * SEGMENT_SECONDS)
     frame_count = segment_frames * len(SEQUENCE)
     walk_header = (source_root / 'src' / 'reference_walk.h').read_text()
-    stride = int(re.search(r'#define REFERENCE_STRIDE (\d+)u', walk_header)[1]) * cell_size
+    yuri_stride = int(re.search(r'#define REFERENCE_STRIDE (\d+)u', walk_header)[1]) * DISPLAY_SIZE / 256
     if sprite_count != 8 or asset['framesPerCat'] != sprite_count + len(REST_ACTIONS):
         raise ValueError('Expected eight walking frames and six restored poses')
     cats = {}
@@ -108,30 +103,34 @@ def main() -> None:
         rest_report = rest_reports[name]
         if rest_report['cellSize'] != cell_size:
             raise ValueError(f'Inconsistent restored-pose metadata for {name}')
-        walk = load_cells(artwork / f'{name}_walk8.png', report)
+        if name == 'onyankopon':
+            walk = load_cells(artwork / 'onyankopon_walk_cycle.png', cell_size,
+                              asset['onyankoponCycleColumns'], asset['onyankoponWalkingPoses'])
+            travel = report['walkCorrection']['stride'] * DISPLAY_SIZE / cell_size
+        else:
+            walk = load_cells(artwork / 'yuri_walk8.png', cell_size, report['columns'], sprite_count)
+            travel = yuri_stride
+        mirrored = name == 'onyankopon'
         rest = {}
         for action in REST_ACTIONS:
             with Image.open(artwork / 'rest' / f'{name}_{action}.png') as pose:
                 if pose.mode != 'RGBA' or pose.size != (cell_size, cell_size):
                     raise ValueError(f'Invalid restored pose: {name}/{action}')
-                rest[action] = pose.copy()
-        if name == 'onyankopon':
-            walk = [cell.transpose(Image.Transpose.FLIP_LEFT_RIGHT) for cell in walk]
-            rest = {action: cell.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-                    for action, cell in rest.items()}
-        cats[name] = {'walk': walk, 'rest': rest}
+                rest[action] = native_size(pose, mirrored)
+        cats[name] = {'walk': [native_size(pose, mirrored) for pose in walk],
+                      'rest': rest, 'travel': travel}
     title_font, name_font = font(27, True), font(20, True)
     small_font, frame_font = font(17), font(18, True)
 
     base = Image.new('RGBA', (WIDTH, HEIGHT), '#f2f5f3')
     draw = ImageDraw.Draw(base)
     draw.text((28, 24), 'Yuri & Onyankopon', font=title_font, fill='#20392f')
-    draw.text((29, 55), f'{sprite_count} walking frames + 6 restored poses | Asset preview, not a Windows capture',
+    draw.text((29, 55), f'Walking at desktop size | Yuri: {sprite_count} poses, Onyankopon: {asset["onyankoponWalkingPoses"]} poses',
               font=small_font, fill='#56695f')
     draw.rounded_rectangle((12, 81, WIDTH-12, 399), radius=18, fill='#fafcfb')
     draw.line((28, GROUND_Y, WIDTH - 28, GROUND_Y), fill='#c4d2c9', width=1)
     draw.line((28, 448, WIDTH - 28, 448), fill='#d1dbd5', width=1)
-    draw.text((29, 466), f"v{asset['version']} | Onyankopon forepaw contact and loop. Rest poses are still images.",
+    draw.text((29, 466), f"v{asset['version']} | Walking cycle and restored rest poses",
               font=small_font, fill='#56695f')
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -145,20 +144,20 @@ def main() -> None:
                 walk_frames += segment_frame
             poses_elapsed = walk_frames * 1000 * sprite_count // (FPS * cycle_ms)
             slot = poses_elapsed % sprite_count
-            distance = walk_frames * 1000 * stride // (FPS * cycle_ms * 256)
-            pose_start = poses_elapsed * stride // (sprite_count * 256)
             canvas = base.copy()
             for name, x_start, direction, label in (
-                ('yuri', 16, 1, 'Yuri'),
-                ('onyankopon', WIDTH-cell_size-16, -1, 'Onyankopon'),
+                ('yuri', 260, 1, 'Yuri'),
+                ('onyankopon', WIDTH-DISPLAY_SIZE-260, -1, 'Onyankopon'),
             ):
-                x = x_start + direction * distance
+                cat = cats[name]
+                cycles = walk_frames * 1000 / (FPS * cycle_ms)
+                x = x_start + direction * int(cycles * cat['travel'])
                 bottom = (reports if action == 'walk' else rest_reports)[name]['displayGroundExclusive']
-                pose = cats[name]['walk'][slot] if action == 'walk' else cats[name]['rest'][action]
-                if name == 'onyankopon' and action == 'walk':
-                    pose = hold_forepaws(pose, direction, distance - pose_start)
-                canvas.alpha_composite(pose, (x, GROUND_Y - bottom))
-                ImageDraw.Draw(canvas).text((x + cell_size // 2, 412), label,
+                count = len(cat['walk'])
+                pose_index = walk_frames * 1000 * count // (FPS * cycle_ms) % count
+                pose = cat['walk'][pose_index] if action == 'walk' else cat['rest'][action]
+                canvas.alpha_composite(pose, (x, GROUND_Y - bottom * DISPLAY_SIZE // cell_size))
+                ImageDraw.Draw(canvas).text((x + DISPLAY_SIZE // 2, 412), label,
                                            anchor='mt', font=name_font, fill='#355448')
             state_text = (f'Walking | FRAME {slot + 1:02d} / {sprite_count:02d}'
                           if action == 'walk' else ACTION_LABELS[action] + ' | RESTORED POSE')

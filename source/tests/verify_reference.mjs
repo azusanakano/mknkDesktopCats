@@ -23,11 +23,11 @@ const blob=fs.readFileSync(path.join(project,'build/assets/sprites.rle'));
 const exe=fs.readFileSync(path.join(project,'dist/mknkDesktopCats.exe'));
 assert(exe.indexOf(blob)>=0,'EXE does not contain the complete current asset bundle');
 assert(blob.subarray(0,4).toString()==='MKCT','Wrong RLE signature');
-assert([1,n,n,2,14].every((value,i)=>blob.readUInt32LE(4+i*4)===value),'Wrong RLE geometry or frame counts');
+assert([2,n,n,2,14,16].every((value,i)=>blob.readUInt32LE(4+i*4)===value),'Wrong RLE geometry or frame counts');
 function runtimeFrame(index) {
-  let at=blob.readUInt32LE(24+index*8);
-  const end=at+blob.readUInt32LE(28+index*8),out=Buffer.alloc(n*n*4);
-  assert(at>=24+28*8&&end<=blob.length&&end>at,'Invalid runtime frame range');
+  let at=blob.readUInt32LE(28+index*8);
+  const end=at+blob.readUInt32LE(32+index*8),out=Buffer.alloc(n*n*4);
+  assert(at>=28+44*8&&end<=blob.length&&end>at,'Invalid runtime frame range');
   let pixel=0;
   while(at<end) {
     const tag=blob[at++],count=tag&127;
@@ -58,9 +58,9 @@ for(let catIndex=0;catIndex<approved.length;catIndex++) {
   const correction=imported.walkCorrection;
   assert(Boolean(correction)===(name==='onyankopon'),'Walk correction must apply to Onyankopon only');
   if(correction) {
-    const patch=await sharp(path.join(project,'art_source/overlays/onyankopon_belly_fur.png')).ensureAlpha().raw().toBuffer();
+    const painted=await sharp(path.join(project,'art_source/overlays/onyankopon_walk_fur.png')).ensureAlpha().raw().toBuffer();
     assert(correction.runtimeRgbaSha256.length===8,'Corrected runtime digests missing');
-    assert(hash(patch)===correction.bellyFur.rgbaSha256,'Belly fur artwork digest mismatch');
+    assert(hash(painted)===correction.paintedPose.rgbaSha256,'Painted artwork digest mismatch');
   }
   const {data:sheet,info:sheetInfo}=await sharp(path.join(project,'build/assets',name+'_walk8.png')).raw().toBuffer({resolveWithObject:true});
   assert(sheetInfo.width===n*4&&sheetInfo.height===n*2&&sheetInfo.channels===4,'Wrong transparent contact sheet geometry');
@@ -105,30 +105,26 @@ for(let catIndex=0;catIndex<approved.length;catIndex++) {
     assert(frameInfo.width===n&&frameInfo.height===n&&frameInfo.channels===4,'Wrong runtime walking PNG geometry');
     assert(record.rgbaSha256===hash(expected),'RGBA after fixed crop and resampling differs');
     if(correction) {
-      assert(!png.equals(expected),'Foreleg correction was not applied');
+      assert(!png.equals(expected),'Onyankopon walk rebuild was not applied');
       assert(correction.runtimeRgbaSha256[slot]===hash(png),'Corrected runtime RGBA hash mismatch');
-      for(let y=0;y<n;y++) {
-        const at=y*n*4;
-        const width=y<=221||y>=374?n:y>=227&&y<=273?192:207;
-        assert(png.subarray(at,at+width*4).equals(expected.subarray(at,at+width*4)),
-          'Walk correction changed artwork outside the foreleg and belly regions');
-      }
     } else assert(png.equals(expected),`Uniformly resampled RGBA differs: ${name} F${slot+1}`);
     for(let y=0;y<n;y++) {
       const sheetAt=((row*n+y)*n*4+col*n)*4;
       assert(png.subarray(y*n*4,(y+1)*n*4).equals(sheet.subarray(sheetAt,sheetAt+n*4)),'PNG / contact sheet frame order mismatch');
     }
     const raw=runtimeFrame(catIndex*14+slot);
-    let visible=0,bottom=0,partial=0,opaque=0;
+    let visible=0,bottom=0,partial=0,opaque=0,solid=0;
     for(let pixel=0;pixel<n*n;pixel++) {
       const p=pixel*4,a=png[p+3],x=pixel%n,y=Math.floor(pixel/n);
       assert(raw[p]===Math.round(png[p+2]*a/255)&&raw[p+1]===Math.round(png[p+1]*a/255)
         &&raw[p+2]===Math.round(png[p]*a/255)&&raw[p+3]===a,'Walking PNG / embedded runtime RLE differs');
       if(a){visible++;bottom=Math.max(bottom,y+1);if(a===255)opaque++;else partial++;}
+      // The painted texture has slight alpha variation even inside the fur.
+      if(a>=(correction?248:255))solid++;
       if(x===0||y===0||x===n-1||y===n-1)assert(a===0,'Foreground reaches runtime image boundary');
       transformedPixels++;
     }
-    assert(visible>20000&&visible<80000&&opaque>20000,'Unexpected runtime visible/solid fur coverage');
+    assert(visible>20000&&visible<80000&&solid>20000,'Unexpected runtime visible/solid fur coverage');
     assert(bottom<=ground,'Runtime foreground exceeds preserved placement reference');
     if(!correction) assert(record.visiblePixels===visible&&record.groundExclusive===bottom,'Import report measured visibility mismatch');
     visibleTotal+=visible;maximumBottom=Math.max(maximumBottom,bottom);partialAlphaPixels+=partial;
@@ -161,8 +157,8 @@ const report={result:'PASS',version,cats,walkingFramesPerCat:8,restFramesPerCat:
   sourceCropRgbPreservedBeforeResize:true,exactPreResizeSourceRgbPixels:preResizePixels,preResizeSourceRgbMismatches:0,
   sourceUniformScale:scale,sourceCellSize:sourceCell,runtimeRgbResampled:true,resamplingKernel:'lanczos3',
   transformedRgbaPixelsChecked:transformedPixels,transformedRgbaMismatches:0,
-  sourceFrameOrderVerified:true,uniformResampledSourceRgbaVerified:true,onyankoponForelegCorrectionVerified:true,
-  onyankoponBellyFurArtworkEmbedded:true,
+  sourceFrameOrderVerified:true,uniformResampledSourceRgbaVerified:true,onyankoponWalkingPoses:24,
+  onyankoponPaintedArtworkHashVerified:true,
   visiblePixels:visibleTotal,greenBackgroundPixelsRemoved:greenBackgroundRemoved,neutralCorePixelsPreserved:neutralCorePreserved,
   partialAlphaPixels,paddingPixels,discardedBackgroundPixels,reusedBackgroundPixels,
   sourceCropCoordinateMismatches:0,sourcePoseWarp:false,sourceFrameReordering:false,sourcePerFrameAlignment:false,

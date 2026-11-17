@@ -86,11 +86,11 @@ for text in ('バージョン情報…', 'バージョン: ' + version, 'ゆり�
     assert text.encode('utf-16le') in data, 'Missing runtime version UI: ' + text
 blob = (project / 'build/assets/sprites.rle').read_bytes()
 # The user approved new walking images; reference/rest checks own image provenance.
-assert struct.unpack_from('<5I', blob, 4) == (1, 425, 425, 2, 14)
+assert struct.unpack_from('<6I', blob, 4) == (2, 425, 425, 2, 14, 16)
 assert blob in data
 result = {'result': 'PASS', 'productVersion': version, 'fileVersion': strings['FileVersion'],
           'resourceLanguage': 'Japanese/Unicode', 'resourceRvaValid': True,
-          'current28ImageBundleEmbedded': True, 'runtimeVersionLabelsPresent': True,
+          'current44ImageBundleEmbedded': True, 'runtimeVersionLabelsPresent': True,
           'windowsExplorerTested': False}
 report_path = project / 'build/reference-validation.json'
 report = json.loads(report_path.read_text())

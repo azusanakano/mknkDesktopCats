@@ -23,10 +23,15 @@ const data=Object.entries(SOURCES).map(([name,source])=>{
     throw new Error(`Missing or stale restored-pose report: ${name}`);
   const rest=Object.fromEntries(restActions.map(action=>[action,
     'data:image/png;base64,'+fs.readFileSync(path.join(artwork,'rest',`${name}_${action}.png`)).toString('base64')]));
+  const cycle=name==='onyankopon'?{
+    image:'data:image/png;base64,'+fs.readFileSync(path.join(artwork,'onyankopon_walk_cycle.png')).toString('base64'),
+    columns:asset.onyankoponCycleColumns,
+    posesPerFrame:asset.onyankoponWalkingPoses/walkingFrames,
+  }:null;
   return {name,groundExclusive:report.displayGroundExclusive,
     restGroundExclusive:restReport.displayGroundExclusive,rest,
     sourceWidth:report.sourceWidth,sourceHeight:report.sourceHeight,sourceCellSize:report.sourceCellSize,
-    columns:report.columns,rows:report.rows,crops:report.frames.map(frame=>frame.crop),
+    columns:report.columns,rows:report.rows,crops:report.frames.map(frame=>frame.crop),cycle,
     original:'data:image/jpeg;base64,'+original.toString('base64'),
     sheet:'data:image/png;base64,'+fs.readFileSync(path.join(artwork,name+'_walk8.png')).toString('base64')};
 });

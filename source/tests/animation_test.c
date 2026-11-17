@@ -9,7 +9,7 @@ int main(void) {
     for(int event=0;event<1000;event++) for(int cat=0;cat<2;cat++) {
       int previous=cats[cat].slot;
       reference_advance(&cats[cat],TIMER_MS,speed);
-      reference_step_pixels(&cats[cat], 224);
+      reference_step_pixels(&cats[cat], 224, REFERENCE_STRIDE);
       int current=cats[cat].slot;
       assert(current==previous || current==(previous+1)%8);
       assert(walk_frames[current]==current && walk_slot_for_frame(current)==current);

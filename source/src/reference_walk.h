@@ -33,9 +33,9 @@ static int reference_advance(ReferenceWalk* clock, unsigned int elapsedMs, int s
 
 /* Move the whole window between pose changes using the same accepted clock.
    At most one call follows each reference_advance. No body deformation. */
-static int reference_step_pixels(ReferenceWalk* clock, unsigned int size) {
+static int reference_step_pixels(ReferenceWalk* clock, unsigned int size, unsigned int stride) {
   const unsigned int denominator = REFERENCE_FRAME_UNITS * REFERENCE_FRAME_COUNT * 256u;
-  clock->distanceRemainder += REFERENCE_STRIDE * size * clock->motionUnits;
+  clock->distanceRemainder += stride * size * clock->motionUnits;
   clock->motionUnits = 0;
   int pixels = (int)(clock->distanceRemainder / denominator);
   clock->distanceRemainder %= denominator;

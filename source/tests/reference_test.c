@@ -11,7 +11,7 @@ int main(void) {
       int changed = reference_advance(&c, 1u, speed);
       if (changed) { count++; assert(c.slot == (before + 1) % 8); }
       else assert(c.slot == before);
-      distance += reference_step_pixels(&c, 256);
+      distance += reference_step_pixels(&c, 256, REFERENCE_STRIDE);
     }
     assert(count == (unsigned int)(8 * speed));
     assert(c.slot == 0 && c.phaseUnits == 0);
@@ -24,8 +24,8 @@ int main(void) {
     int changed = reference_advance(&stalled, intervals[n % 7], n % 3 + 1);
     assert(stalled.slot == (old + changed) % 8);
     assert(stalled.phaseUnits < REFERENCE_FRAME_UNITS);
-    assert(reference_step_pixels(&stalled, 288) <= 14);
-    assert(reference_step_pixels(&stalled, 288) == 0); /* consumed once */
+    assert(reference_step_pixels(&stalled, 288, REFERENCE_STRIDE) <= 14);
+    assert(reference_step_pixels(&stalled, 288, REFERENCE_STRIDE) == 0); /* consumed once */
   }
   ReferenceWalk speedChange = {0};
   assert(!reference_advance(&speedChange, 120, 2));
@@ -38,20 +38,20 @@ int main(void) {
     unsigned int distance = 0;
     for (int n = 0; n < 8 * 16; n++) {
       reference_advance(&c, 150, 2);
-      distance += reference_step_pixels(&c, size);
+      distance += reference_step_pixels(&c, size, REFERENCE_STRIDE);
     }
     assert(distance == 16u * REFERENCE_STRIDE * size / 256u);
   }
   /* Motion must begin before a 150ms normal-speed pose boundary. */
   ReferenceWalk smooth = {0};
   assert(!reference_advance(&smooth, 33, 2));
-  assert(reference_step_pixels(&smooth, 256) == 1);
+  assert(reference_step_pixels(&smooth, 256, REFERENCE_STRIDE) == 1);
   assert(smooth.slot == 0);
   /* A 33ms render cadence preserves the clock over complete cycles. */
   ReferenceWalk cadence = {0}; unsigned int distance = 0, changes = 0;
   for (int i = 0; i < 400; i++) {
     changes += reference_advance(&cadence, 33, 2);
-    distance += reference_step_pixels(&cadence, 256);
+    distance += reference_step_pixels(&cadence, 256, REFERENCE_STRIDE);
   }
   assert(changes == 88 && cadence.slot == 0 && cadence.phaseUnits == 0);
   assert(distance == 528);

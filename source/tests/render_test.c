@@ -72,6 +72,16 @@ void* __imp_MonitorFromWindow = monitor_from_window;
 void* __imp_GetMonitorInfoW = monitor_info;
 void* __imp_GetSystemMetrics = system_metric;
 
+static BYTE* test_sprite(int frame) {
+  BYTE* pixels = calloc(1, SOURCE_W * SOURCE_H * 4);
+  assert(pixels != NULL);
+  for (int y = 0; y < SOURCE_H; y++) for (int x = 0; x < SOURCE_W; x++) {
+    BYTE* p = pixels + (y * SOURCE_W + x) * 4;
+    p[0] = (BYTE)x; p[1] = (BYTE)frame; p[2] = (BYTE)y; p[3] = 255;
+  }
+  return pixels;
+}
+
 int main(void) {
   for (int cat = 0; cat < 2; cat++) {
   uploads = moves = allocations = 0;
@@ -81,22 +91,21 @@ int main(void) {
   pet.id = cat; pet.hwnd = (HWND)1; pet.visible = 1; pet.direction = 1;
   pet.behavior.state = STATE_SIT; pet.frame = 4;
   for (int frame = 0; frame < FRAME_COUNT; frame++) {
-    g_frames[cat][frame] = calloc(1, SOURCE_W * SOURCE_H * 4);
-    for (int y = 0; y < SOURCE_H; y++) for (int x = 0; x < SOURCE_W; x++) {
-      BYTE* p = g_frames[cat][frame] + (y * SOURCE_W + x) * 4;
-      p[0] = (BYTE)x; p[1] = (BYTE)frame; p[2] = (BYTE)y; p[3] = 255;
-    }
+    g_frames[cat][frame] = test_sprite(frame);
   }
+  if (cat == 1) for (int i = 0; i < ONYANKOPON_EXTRA_POSES; i++)
+    g_onyankoponExtra[i] = test_sprite(FRAME_COUNT + i);
+  int cacheCount = frame_count_for_pet(cat);
   for (int sizeIndex = 0; sizeIndex < 3; sizeIndex++) {
     g_settings.sizeIndex = sizeIndex;
     int size = g_sizes[sizeIndex];
     assert(create_pet_surface(&pet, size));
-    for (int dir = 0; dir < 2; dir++) for (int slot = 0; slot < FRAME_COUNT; slot++) {
-      BYTE* cache = pet.frameCache + (dir * FRAME_COUNT + slot) * size * size * 4;
+    for (int dir = 0; dir < 2; dir++) for (int slot = 0; slot < cacheCount; slot++) {
+      BYTE* cache = pet.frameCache + (dir * cacheCount + slot) * size * size * 4;
       for (int y = 0; y < size; y++) for (int x = 0; x < size; x++) {
         int sx = x * SOURCE_W / size;
         if (dir) sx = SOURCE_W - 1 - sx;
-        BYTE* source = g_frames[cat][slot] + ((y * SOURCE_H / size) * SOURCE_W + sx) * 4;
+        const BYTE* source = frame_pixels(cat, slot) + ((y * SOURCE_H / size) * SOURCE_W + sx) * 4;
         assert(memcmp(cache + (y * size + x) * 4, source, 4) == 0);
       }
     }
@@ -147,29 +156,28 @@ int main(void) {
     render_pet(&pet);
     assert(pet.renderedFrame == pet.frame);
   }
-  assert(pet.x == 100 + 48 * g_sizes[g_settings.sizeIndex] / 256);
-  /* A held Onyankopon pose keeps the front foot on the desktop as
-     the window moves. Check the real compositor in both directions. */
+  assert(pet.x == 100 + (cat == 1 ? ONYANKOPON_STRIDE : REFERENCE_STRIDE) * g_sizes[g_settings.sizeIndex] / 256);
+  /* Each clock tick can select the next Onyankopon pose within a named frame.
+     The unchanged Yuri pose only moves its window on those ticks. */
   for (int dir = -1; dir <= 1; dir += 2) {
     for (int si = 0; si < 3; si++) {
       g_settings.sizeIndex = si;
-      int size = g_sizes[si], foot = 3 * size / 4, floor = 81 * size / 100;
-      int x = dir > 0 ? foot : size - 1 - foot;
       pet.direction = dir;
       pet.reference = (ReferenceWalk){0};
+      pet.frame = 0;
       render_pet(&pet);
       int oldFrame = pet.frame, oldX = pet.x, oldUploads = uploads, oldMoves = moves;
-      BYTE paw = pet.pixels[(floor * size + x) * 4];
-      update_reference_walk(&pet, 55); render_pet(&pet);
-      int moved = (pet.x - oldX) * dir;
-      assert(pet.frame == oldFrame && moved > 0);
-      if (cat == 0) {
-        assert(uploads == oldUploads && moves == oldMoves + 1);
-      } else {
-        assert(uploads == oldUploads + 1 && moves == oldMoves);
-        assert(pet.pixels[(floor * size + x - dir * moved) * 4] == paw);
-        assert(pet.pixels[x * 4] == (BYTE)((dir > 0 ? x * SOURCE_W / size
-                                      : SOURCE_W - 1 - x * SOURCE_W / size)));
+      for (int i = 0; i < 2; i++) {
+        update_reference_walk(&pet, 50); render_pet(&pet);
+        assert(pet.frame == oldFrame && (pet.x - oldX) * dir > 0);
+        if (cat == 0) {
+          assert(uploads == oldUploads && moves == oldMoves + i + 1);
+        } else {
+          assert(uploads == oldUploads + i + 1 && moves == oldMoves);
+          assert(pet.renderedFrame == FRAME_COUNT + i);
+          assert(pet.pixels[1] == FRAME_COUNT + i);
+          assert(pet.pixels[0] == (BYTE)(dir > 0 ? 0 : SOURCE_W - 1));
+        }
       }
     }
   }
@@ -253,6 +261,7 @@ int main(void) {
   assert(uploads + moves == frozen);
   destroy_pet_surface(&pet);
   for (int frame = 0; frame < FRAME_COUNT; frame++) free(g_frames[cat][frame]);
+  if (cat == 1) for (int i = 0; i < ONYANKOPON_EXTRA_POSES; i++) free(g_onyankoponExtra[i]);
   }
   /* Test the actual action-menu dispatcher: both cat menus reach every
      action, preserve the other cat, and reject unrelated menu identifiers. */
@@ -304,6 +313,6 @@ int main(void) {
   g_fullscreenHidden = 0; g_pets[0].dragging = 1; refresh_timer(); assert(requestedTimer == 200);
   g_pets[0].dragging = 0; g_pets[0].visible = 0; refresh_timer(); assert(requestedTimer == 200);
   g_pets[0].visible = 1; refresh_timer(); assert(requestedTimer == TIMER_MS);
-  puts("renderer: both cats; all sizes/directions, all14 cached poses, move-only updates, hearts, pause/hide/drag clocks, stationary rest, sleep/stretch/walk recovery, action menus, encounters, adaptive idle timer PASS");
+  puts("renderer: both cats; all sizes/directions, 44 cached poses, subposes, move-only updates, hearts, pause/hide/drag clocks, stationary rest, sleep/stretch/walk recovery, action menus, encounters, adaptive idle timer PASS");
   return 0;
 }

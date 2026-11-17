@@ -1,11 +1,13 @@
 {
-  "version": "1.9.4",
+  "version": "1.9.8",
   "width": 425,
   "height": 425,
   "cats": 2,
   "framesPerCat": 14,
   "walkingFramesPerCat": 8,
   "restingFramesPerCat": 6,
+  "onyankoponWalkingPoses": 24,
+  "onyankoponCycleColumns": 6,
   "restActions": [
     "sit",
     "sleep",
@@ -14,15 +16,15 @@
     "jump",
     "alert"
   ],
-  "frameOrder": "F01..F08, sit, sleep, stretch, paw, jump, alert",
+  "frameOrder": "F01..F08, sit, sleep, stretch, paw, jump, alert; then Onyankopon in-between poses",
   "normalCycleMs": 1200,
   "cycleMs": {
     "slow": 2400,
     "normal": 1200,
     "fast": 800
   },
-  "encodedBytes": 5178228,
-  "uncompressedBytes": 20230000,
+  "encodedBytes": 8512016,
+  "uncompressedBytes": 31790000,
   "originalSourceBytesPreserved": true,
   "sourceRgbPreserved": false,
   "wholeFrameUniformResampling": true,

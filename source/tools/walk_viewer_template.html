@@ -7,7 +7,7 @@
 </style></head><body><main>
 <p class="brand">ネコシステム社 / mknkDesktopCats</p>
 <h1>歩く、座る、くつろぐ。<span class="badge">v__APP_VERSION__</span></h1>
-<p class="sub">オニャンコポンの前足とループを調整した歩行を、8コマで確かめられます。</p>
+<p class="sub">オニャンコポンの腹毛と歩行を確認できます。コマ送りでは8つの姿勢を選べます。</p>
 <div class="options"><label>動作 <select id="action" disabled><option value="walk">歩く · 8コマ</option><option value="sit">座る</option><option value="sleep">眠る</option><option value="stretch">伸びをする</option><option value="paw">前足を上げる</option><option value="jump">ジャンプの姿勢</option><option value="alert">見上げる</option></select></label><span id="action-note">新しい歩行画像を再生中</span></div>
 <div class="panels">
 <section class="panel"><h2><span class="dot"></span>ゆりちゃん</h2><div class="stage"><canvas id="yuri" width="1" height="1" aria-label="ゆりちゃんの歩行"></canvas></div><div id="yuri-frames" class="frames"></div></section>
@@ -19,17 +19,46 @@
 <details id="comparison"><summary>元画像の同じコマと比較する</summary><div class="originals"><div><div class="stage"><canvas id="yuri-original" width="1" height="1" aria-label="ゆりちゃんの元画像"></canvas></div><p>ゆりちゃん · 添付JPEGの同じコマ</p></div><div><div class="stage"><canvas id="onyankopon-original" width="1" height="1" aria-label="オニャンコポンの元画像"></canvas></div><p>オニャンコポン · 添付JPEGの同じコマ</p></div></div></details>
 <details><summary>添付された元画像を全体表示する</summary><div class="originals"><div><img id="yuri-source-sheet" class="original-sheet" alt="ゆりちゃんの添付JPEG全体・左上から行順の8コマ"><p>ゆりちゃん · 元画像の縦横比を保持</p></div><div><img id="onyankopon-source-sheet" class="original-sheet" alt="オニャンコポンの添付JPEG全体・左上から行順の8コマ"><p>オニャンコポン · 元画像の縦横比を保持</p></div></div></details>
 <p id="error" class="error" role="alert"></p>
-<p class="note">歩行は F01 から F08 まで進み、F01 に戻ります。左右キーでコマ送り、スペースキーで再生・一時停止ができます。<br>ゆりちゃんは原画の行順、オニャンコポンは前足を補正した表示用の8コマです。原画欄には取り込み元を行順で表示します。<br>このページはその場での素材再生です。実際の横移動と接地補正は、同梱の動画で確認できます。</p>
+<p class="note">左右キーでコマ送り、スペースキーで再生・一時停止ができます。<br>オニャンコポンは再生時に中間の姿勢も表示します。横に移動する歩行は同梱の動画で確認できます。</p>
 </main><script>
 'use strict';
 const data=__IMAGE_DATA__,config=__VIEWER_CONFIG__,el=id=>document.getElementById(id),buttons=[];
 const actionLabels={walk:'歩く',sit:'座る',sleep:'眠る',stretch:'伸びをする',paw:'前足を上げる',jump:'ジャンプの姿勢',alert:'見上げる'};
-let slot=0,action='walk',playing=false,phase=0,last=0,raf=0,ready=false,frameInterval=config.cycleMs.normal/config.frames;
-const pets=data.map(p=>{const sheet=new Image(),original=new Image();sheet.src=p.sheet;original.src=p.original;const rest=Object.fromEntries(config.restActions.map(name=>{const image=new Image();image.src=p.rest[name];return [name,image];}));return {...p,sheet,original,rest};});
+let slot=0,action='walk',playing=false,phase=0,last=0,raf=0,ready=false,shownPose=-1,frameInterval=config.cycleMs.normal/config.frames;
+const loadImage=src=>{const image=new Image();image.src=src;return image;};
+const pets=data.map(p=>({
+  ...p,sheet:loadImage(p.sheet),original:loadImage(p.original),
+  rest:Object.fromEntries(config.restActions.map(name=>[name,loadImage(p.rest[name])])),
+  cycle:p.cycle?{...p.cycle,image:loadImage(p.cycle.image)}:null,
+}));
+const posesPerFrame=Math.max(...pets.map(p=>p.cycle?.posesPerFrame??1));
+const currentPose=()=>slot*posesPerFrame+Math.floor(phase*posesPerFrame/frameInterval);
 function stop(){playing=false;el('play').textContent='再生';el('play').setAttribute('aria-pressed','false');if(raf)cancelAnimationFrame(raf);raf=0;}
-function draw(canvas,pet,sourceSlot,original=false){const ctx=canvas.getContext('2d'),n=config.cellSize,isRest=action!=='walk'&&!original,crop=isRest?{x:0,y:0,width:n,height:n}:original?pet.crops[sourceSlot]:{x:sourceSlot%pet.columns*n,y:Math.floor(sourceSlot/pet.columns)*n,width:n,height:n};ctx.save();ctx.clearRect(0,0,n,n);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";if(el('mirror').checked){ctx.translate(n,0);ctx.scale(-1,1);}ctx.drawImage(isRest?pet.rest[action]:original?pet.original:pet.sheet,crop.x,crop.y,crop.width,crop.height,0,config.commonGround-(isRest?pet.restGroundExclusive:pet.groundExclusive),original?crop.width*n/pet.sourceCellSize:n,original?crop.height*n/pet.sourceCellSize:n);ctx.restore();}
-function paint(){if(!ready)return;for(const pet of pets){draw(el(pet.name),pet,slot);el(pet.name).setAttribute('aria-label',(pet.name==='yuri'?'ゆりちゃん':'オニャンコポン')+'：'+actionLabels[action]);if(action==='walk')draw(el(pet.name+'-original'),pet,slot,true);}el('seek').value=slot;el('seek').setAttribute('aria-valuetext','F'+String(slot+1).padStart(2,'0'));el('count').textContent=action==='walk'?'F'+String(slot+1).padStart(2,'0')+' / '+config.frames:actionLabels[action]+' · 復元姿勢';buttons.forEach(({b,n})=>b.setAttribute('aria-current',String(action==='walk'&&n===slot)));}
-function tick(t){if(!playing)return;phase+=Math.min(Math.max(t-last,0),250);last=t;if(phase>=frameInterval*2)phase=frameInterval;if(phase>=frameInterval){phase%=frameInterval;if(!el('loop').checked&&slot+1>=config.frames){slot=config.frames-1;stop();}else slot=(slot+1)%config.frames;paint();}if(playing)raf=requestAnimationFrame(tick);}
+function draw(canvas,pet,sourceSlot,original=false){
+ const ctx=canvas.getContext('2d'),n=config.cellSize,isRest=action!=='walk'&&!original;
+ const cycle=!isRest&&!original?pet.cycle:null;
+ const index=cycle?currentPose():sourceSlot,columns=cycle?cycle.columns:pet.columns;
+ const crop=isRest?{x:0,y:0,width:n,height:n}:original?pet.crops[sourceSlot]:
+   {x:index%columns*n,y:Math.floor(index/columns)*n,width:n,height:n};
+ const image=isRest?pet.rest[action]:original?pet.original:cycle?cycle.image:pet.sheet;
+ ctx.save();ctx.clearRect(0,0,n,n);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";
+ if(el('mirror').checked){ctx.translate(n,0);ctx.scale(-1,1);}
+ ctx.drawImage(image,crop.x,crop.y,crop.width,crop.height,0,config.commonGround-(isRest?pet.restGroundExclusive:pet.groundExclusive),original?crop.width*n/pet.sourceCellSize:n,original?crop.height*n/pet.sourceCellSize:n);
+ ctx.restore();
+}
+function paint(){if(!ready)return;shownPose=currentPose();for(const pet of pets){draw(el(pet.name),pet,slot);el(pet.name).setAttribute('aria-label',(pet.name==='yuri'?'ゆりちゃん':'オニャンコポン')+'：'+actionLabels[action]);if(action==='walk')draw(el(pet.name+'-original'),pet,slot,true);}el('seek').value=slot;el('seek').setAttribute('aria-valuetext','F'+String(slot+1).padStart(2,'0'));el('count').textContent=action==='walk'?'F'+String(slot+1).padStart(2,'0')+' / '+config.frames:actionLabels[action]+' · 復元姿勢';buttons.forEach(({b,n})=>b.setAttribute('aria-current',String(action==='walk'&&n===slot)));}
+function tick(t){
+ if(!playing)return;
+ phase+=Math.min(Math.max(t-last,0),250);last=t;
+ if(phase>=frameInterval*2)phase=frameInterval;
+ if(phase>=frameInterval){
+  phase%=frameInterval;
+  if(!el('loop').checked&&slot+1>=config.frames){phase=0;stop();paint();return;}
+  slot=(slot+1)%config.frames;
+ }
+ if(currentPose()!==shownPose)paint();
+ if(playing)raf=requestAnimationFrame(tick);
+}
 function play(){if(!ready||playing||action!=='walk')return;if(!el('loop').checked&&slot===config.frames-1){slot=0;phase=0;paint();}playing=true;last=performance.now();el('play').textContent='一時停止';el('play').setAttribute('aria-pressed','true');raf=requestAnimationFrame(tick);}
 function choose(n){if(!ready||action!=='walk')return;stop();phase=0;slot=n;paint();}
 el('action').onchange=()=>{stop();action=el('action').value;phase=0;const walking=action==='walk';['play','prev','next','seek','loop','speed'].forEach(id=>el(id).disabled=!walking);el('seek').hidden=!walking;el('comparison').hidden=!walking;el('comparison').open=false;for(const pet of pets)el(pet.name+'-frames').style.display=walking?'':'none';el('action-note').textContent=walking?'新しい歩行画像を再生中':'旧版から復元した姿勢 · 静止画';paint();if(walking)play();};
@@ -38,7 +67,7 @@ el('speed').onchange=()=>{const nextInterval=config.cycleMs[el('speed').value]/c
 el('bg').onchange=()=>document.querySelectorAll('.stage').forEach(stage=>{stage.classList.toggle('checker',el('bg').value==='checker');stage.style.backgroundColor=el('bg').value==='checker'?'#ffffff':el('bg').value;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
 document.addEventListener('keydown',event=>{if(!ready||action!=='walk'||/INPUT|SELECT|BUTTON|SUMMARY/.test(document.activeElement.tagName))return;if(event.code==='Space'){event.preventDefault();playing?stop():play();}else if(event.code==='ArrowRight'){event.preventDefault();choose((slot+1)%config.frames);}else if(event.code==='ArrowLeft'){event.preventDefault();choose((slot+config.frames-1)%config.frames);}});
-Promise.all(pets.flatMap(p=>[p.sheet.decode(),p.original.decode(),...Object.values(p.rest).map(image=>image.decode())])).then(()=>{
+Promise.all(pets.flatMap(p=>[p.sheet,p.original,...(p.cycle?[p.cycle.image]:[]),...Object.values(p.rest)].map(image=>image.decode()))).then(()=>{
  for(const pet of pets){if(pet.sheet.naturalWidth!==config.cellSize*pet.columns||pet.sheet.naturalHeight!==config.cellSize*pet.rows||pet.original.naturalWidth!==pet.sourceWidth||pet.original.naturalHeight!==pet.sourceHeight||Object.values(pet.rest).some(image=>image.naturalWidth!==config.cellSize||image.naturalHeight!==config.cellSize))throw new Error('Image dimensions do not match');for(const id of [pet.name,pet.name+'-original']){el(id).width=config.cellSize;el(id).height=config.cellSize;}const full=el(pet.name+'-source-sheet');full.src=pet.original.src;full.width=pet.sourceWidth;full.height=pet.sourceHeight;}
  el('seek').max=config.frames-1;
  for(const option of el('speed').options){const labels={slow:'ゆっくり',normal:'ふつう',fast:'元気'};option.textContent=labels[option.value]+' · '+config.cycleMs[option.value]/1000+'秒 / 周';}

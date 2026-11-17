@@ -30,7 +30,6 @@ typedef struct Pet {
   int renderedFrame;
   int renderedDirection;
   int renderedHearts;
-  int renderedPawShift;
   int renderedX;
   int renderedY;
   int baseY;
@@ -77,6 +76,7 @@ static WCHAR g_settingsPath[640];
 static Pet g_pets[PET_COUNT];
 static BYTE* g_spriteMemory;
 static BYTE* g_frames[PET_COUNT][FRAME_COUNT];
+static BYTE* g_onyankoponExtra[ONYANKOPON_EXTRA_POSES];
 static int g_fullscreenHidden;
 static int g_tick;
 static unsigned long long g_lastUpdateMs;
@@ -214,42 +214,41 @@ static int init_sprites(void) {
   const BYTE* blob = _binary_sprites_rle_start;
   SIZE_T blobSize = (SIZE_T)(_binary_sprites_rle_end - _binary_sprites_rle_start);
   const DWORD expectedPixels = SOURCE_W * SOURCE_H;
-  const SIZE_T headerSize = 24u + PET_COUNT * FRAME_COUNT * 8u;
+  const int baseFrames = PET_COUNT * FRAME_COUNT;
+  const int totalFrames = baseFrames + ONYANKOPON_EXTRA_POSES;
+  const SIZE_T headerSize = 28u + (SIZE_T)totalFrames * 8u;
   if (blobSize < headerSize || blob[0] != 'M' || blob[1] != 'K' || blob[2] != 'C' || blob[3] != 'T') return 0;
-  if (read_u32(blob + 4) != 1u || read_u32(blob + 8) != SOURCE_W || read_u32(blob + 12) != SOURCE_H) return 0;
-  if (read_u32(blob + 16) != PET_COUNT || read_u32(blob + 20) != FRAME_COUNT) return 0;
+  if (read_u32(blob + 4) != 2u || read_u32(blob + 8) != SOURCE_W || read_u32(blob + 12) != SOURCE_H) return 0;
+  if (read_u32(blob + 16) != PET_COUNT || read_u32(blob + 20) != FRAME_COUNT ||
+      read_u32(blob + 24) != ONYANKOPON_EXTRA_POSES) return 0;
 
   g_spriteMemory = (BYTE*)CALL(HeapAlloc)(g_heap, HEAP_ZERO_MEMORY,
-    (SIZE_T)PET_COUNT * FRAME_COUNT * SOURCE_W * SOURCE_H * 4u);
+    (SIZE_T)totalFrames * expectedPixels * 4u);
   if (!g_spriteMemory) return 0;
 
-  for (int cat = 0; cat < PET_COUNT; cat++) {
-    for (int frame = 0; frame < FRAME_COUNT; frame++) {
-      int index = cat * FRAME_COUNT + frame;
-      DWORD offset = read_u32(blob + 24 + index * 8);
-      DWORD size = read_u32(blob + 28 + index * 8);
-      BYTE* dest = g_spriteMemory + (SIZE_T)index * SOURCE_W * SOURCE_H * 4u;
-      DWORD pixel = 0;
-      if (offset < headerSize || (SIZE_T)offset + size > blobSize) return 0;
-      const BYTE* source = blob + offset;
-      const BYTE* end = source + size;
-      while (source < end && pixel < expectedPixels) {
-        BYTE tag = *source++;
-        DWORD run = tag & 0x7Fu;
-        if (!run || pixel + run > expectedPixels) return 0;
-        if (tag & 0x80u) {
-          pixel += run;
-        } else {
-          DWORD bytes = run * 4u;
-          if ((SIZE_T)(end - source) < bytes) return 0;
-          mem_copy(dest + (SIZE_T)pixel * 4u, source, bytes);
-          source += bytes;
-          pixel += run;
-        }
+  for (int index = 0; index < totalFrames; index++) {
+    DWORD offset = read_u32(blob + 28 + index * 8);
+    DWORD size = read_u32(blob + 32 + index * 8);
+    BYTE* dest = g_spriteMemory + (SIZE_T)index * expectedPixels * 4u;
+    DWORD pixel = 0;
+    if (offset < headerSize || (SIZE_T)offset + size > blobSize) return 0;
+    const BYTE* source = blob + offset;
+    const BYTE* end = source + size;
+    while (source < end && pixel < expectedPixels) {
+      BYTE tag = *source++;
+      DWORD run = tag & 0x7Fu;
+      if (!run || pixel + run > expectedPixels) return 0;
+      if (!(tag & 0x80u)) {
+        DWORD bytes = run * 4u;
+        if ((SIZE_T)(end - source) < bytes) return 0;
+        mem_copy(dest + (SIZE_T)pixel * 4u, source, bytes);
+        source += bytes;
       }
-      if (pixel != expectedPixels || source != end) return 0;
-      g_frames[cat][frame] = dest;
+      pixel += run;
     }
+    if (pixel != expectedPixels || source != end) return 0;
+    if (index < baseFrames) g_frames[index / FRAME_COUNT][index % FRAME_COUNT] = dest;
+    else g_onyankoponExtra[index - baseFrames] = dest;
   }
   return 1;
 }
@@ -273,15 +272,25 @@ static void scale_sprite(BYTE* dest, const BYTE* source, int size, int direction
   }
 }
 
+static int frame_count_for_pet(int petId) {
+  return FRAME_COUNT + (petId == 1 ? ONYANKOPON_EXTRA_POSES : 0);
+}
+
+static const BYTE* frame_pixels(int petId, int frame) {
+  if (frame < FRAME_COUNT) return g_frames[petId][frame];
+  return g_onyankoponExtra[frame - FRAME_COUNT];
+}
+
 static void create_frame_cache(Pet* pet, int size) {
   SIZE_T frameBytes = (SIZE_T)size * size * 4u;
+  int count = frame_count_for_pet(pet->id);
   if (pet->frameCache) CALL(HeapFree)(g_heap, 0, pet->frameCache);
-  pet->frameCache = (BYTE*)CALL(HeapAlloc)(g_heap, 0, frameBytes * FRAME_COUNT * 2u);
+  pet->frameCache = (BYTE*)CALL(HeapAlloc)(g_heap, 0, frameBytes * count * 2u);
   if (!pet->frameCache) return; /* Fall back to scaling the changed frame only. */
   for (int direction = 0; direction < 2; direction++) {
-    for (int frame = 0; frame < FRAME_COUNT; frame++) {
-      scale_sprite(pet->frameCache + (direction * FRAME_COUNT + frame) * frameBytes,
-                   g_frames[pet->id][frame], size, direction ? -1 : 1);
+    for (int frame = 0; frame < count; frame++) {
+      scale_sprite(pet->frameCache + (direction * count + frame) * frameBytes,
+                   frame_pixels(pet->id, frame), size, direction ? -1 : 1);
     }
   }
 }
@@ -369,7 +378,7 @@ static void draw_heart(Pet* pet, int centerX, int topY, int scale, BYTE red, BYT
 }
 
 static void render_pet(Pet* pet) {
-  int size, frame, hearts, pawShift, sameContent;
+  int size, frame, hearts, sameContent;
   POINT destination;
   POINT sourcePoint = {0, 0};
   SIZE windowSize;
@@ -380,13 +389,15 @@ static void render_pet(Pet* pet) {
     if (!create_pet_surface(pet, size)) return;
   }
   frame = int_clamp(pet->frame, 0, FRAME_COUNT - 1);
-  pawShift = pet->id == 1 && frame < FRAME_SIT ? onyankopon_paw_shift(&pet->reference, (unsigned int)size) : 0;
+  if (pet->id == 1 && frame < FRAME_SIT) {
+    int subpose = onyankopon_subpose(&pet->reference);
+    if (subpose) frame = FRAME_COUNT + frame * (ONYANKOPON_WALK_POSES_PER_FRAME - 1u) + subpose - 1;
+  }
   destination.x = pet->x;
   destination.y = pet->y;
   hearts = pet->loveTicks > 0 ? 1 : 0;
   sameContent = pet->rendered && pet->renderedFrame == frame &&
-                pet->renderedDirection == pet->direction && pet->renderedHearts == hearts &&
-                pet->renderedPawShift == pawShift;
+                pet->renderedDirection == pet->direction && pet->renderedHearts == hearts;
   if (sameContent) {
     if (pet->renderedX == destination.x && pet->renderedY == destination.y) return;
     /* Microsoft documents NULL source, size, blend and zero flags for a
@@ -400,12 +411,11 @@ static void render_pet(Pet* pet) {
   }
   if (pet->frameCache) {
     SIZE_T frameBytes = (SIZE_T)size * size * 4u;
-    int index = frame + (pet->direction < 0 ? FRAME_COUNT : 0);
+    int index = frame + (pet->direction < 0 ? frame_count_for_pet(pet->id) : 0);
     mem_copy(pet->pixels, pet->frameCache + index * frameBytes, frameBytes);
   } else {
-    scale_sprite(pet->pixels, g_frames[pet->id][frame], size, pet->direction);
+    scale_sprite(pet->pixels, frame_pixels(pet->id, frame), size, pet->direction);
   }
-  if (pawShift) onyankopon_hold_forepaws(pet->pixels, size, pet->direction, pawShift);
   if (hearts & 1) {
     int scale = size >= 270 ? 2 : 1;
     draw_heart(pet, size / 2, 8, scale, 255, 92, 156);
@@ -418,7 +428,6 @@ static void render_pet(Pet* pet) {
     pet->renderedFrame = frame;
     pet->renderedDirection = pet->direction;
     pet->renderedHearts = hearts;
-    pet->renderedPawShift = pawShift;
     pet->renderedX = destination.x;
     pet->renderedY = destination.y;
   }
@@ -611,7 +620,8 @@ static void update_reference_walk(Pet* pet, unsigned int elapsed) {
   reference_advance(&pet->reference, elapsed, g_speeds[g_settings.speedIndex]);
   int size = g_sizes[g_settings.sizeIndex];
   get_work_area(pet, &area);
-  int step = reference_step_pixels(&pet->reference, (unsigned int)size);
+  unsigned int stride = pet->id == 1 ? ONYANKOPON_STRIDE : REFERENCE_STRIDE;
+  int step = reference_step_pixels(&pet->reference, (unsigned int)size, stride);
   pet->x += pet->direction * step;
   int right = int_max(area.left, area.right - size);
   if (pet->x <= area.left) { pet->x = area.left; pet->direction = 1; }
@@ -889,7 +899,7 @@ static LRESULT MSABI PetProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     pet = (Pet*)create->lpCreateParams;
     CALL(SetWindowLongPtrW)(hwnd, GWLP_USERDATA, (LONG_PTR)pet);
     pet->hwnd = hwnd;
-    return TRUE;
+    return CALL(DefWindowProcW)(hwnd, msg, wParam, lParam);
   }
   if (!pet) return CALL(DefWindowProcW)(hwnd, msg, wParam, lParam);
 
@@ -1093,6 +1103,9 @@ __attribute__((noreturn)) void MSABI WinMainCRTStartup(void) {
     CALL(ExitProcess)(4);
   }
 
+  WCHAR reviewMode[2];
+  int reviewWindows = CALL(GetEnvironmentVariableW)(W("MKNK_DESKTOP_REVIEW"), reviewMode, 2) == 1u &&
+                      reviewMode[0] == (WCHAR)'1';
   for (int i = 0; i < PET_COUNT; i++) {
     Pet* pet = &g_pets[i];
     pet->id = i;
@@ -1101,7 +1114,11 @@ __attribute__((noreturn)) void MSABI WinMainCRTStartup(void) {
     pet_behavior_init(&pet->behavior, (unsigned int)CALL(GetTickCount64)() + (unsigned int)i * 2654435761u,
                       120u + (unsigned int)i * 50u);
     pet->frame = 0;
-    pet->hwnd = CALL(CreateWindowExW)(WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
+    if (reviewWindows) pet->behavior.ticksRemaining = 0x7fffffffu;
+    // Review mode exposes the real layered windows to desktop capture tools.
+    DWORD windowStyle = WS_EX_LAYERED | WS_EX_TOPMOST;
+    if (!reviewWindows) windowStyle |= WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+    pet->hwnd = CALL(CreateWindowExW)(windowStyle,
       W("mknkDesktopCats.Pet"), i == 0 ? W("ゆりちゃん") : W("オニャンコポン"), WS_POPUP,
       0, 0, g_sizes[g_settings.sizeIndex], g_sizes[g_settings.sizeIndex],
       NULLPTR, NULLPTR, g_instance, pet);

@@ -18,6 +18,27 @@ const yuriFrames = await Promise.all(Array.from({length: 8}, (_, slot) =>
   sharp(path.join(assets, `yuri_walk_0${slot + 1}.png`)).ensureAlpha().raw().toBuffer()));
 
 const alpha = (frame, x, y) => frame[(y * size + x) * 4 + 3];
+// Allow the torso to bob but check that its coat does not change between poses.
+for (const [slot, frame] of frames.entries()) {
+  let best = Infinity;
+  for (let dy = -4; dy <= 4; dy++) {
+    let total = 0;
+    let samples = 0;
+    for (let y = 176; y < 209; y += 2) {
+      for (let x = 176; x < 257; x += 2) {
+        const first = (y * size + x) * 4;
+        const second = ((y + dy) * size + x) * 4;
+        for (let c = 0; c < 3; c++) {
+          total += Math.abs(frames[0][first + c] - frame[second + c]);
+          samples++;
+        }
+      }
+    }
+    best = Math.min(best, total / samples);
+  }
+  assert.ok(best <= 6, `F0${slot + 1} coat pattern changes after alignment (${best.toFixed(1)} RGB levels)`);
+}
+
 function bellyEdge(frame) {
   const heights = [207, 211, 215, 219, 223].map(x => {
     let y = 235;
@@ -49,53 +70,115 @@ for (const [slot, donor] of [4, 3].entries()) {
   }
 }
 
-function foot(frame, minX = 215, maxX = 405) {
-  let bottom = 319;
-  const pixels = [];
-  for (let y = 320; y < 349; y++) {
-    for (let x = minX; x <= maxX; x++) {
-      if (alpha(frame, x, y) < 128) continue;
-      pixels.push({x, y});
-      bottom = y;
+const generated = path.dirname(assets);
+const {onyankopon: {walkCorrection: walk}} = JSON.parse(fs.readFileSync(path.join(generated, 'reference-import.json'), 'utf8'));
+const cycle = sharp(path.join(generated, 'onyankopon_walk_cycle.png'));
+const poses = await Promise.all(Array.from({length: 24}, (_, pose) =>
+  cycle.clone().extract({left: pose % 6 * size, top: Math.floor(pose / 6) * size, width: size, height: size})
+    .raw().toBuffer()));
+const movement = walk.stride / poses.length;
+// A foot-only shuffle can pass the sole-drift checks. Also require comparable
+// forward/backward extension to Yuri and visible motion high on each limb.
+const forePawXs = walk.pawPositions.map(paws => paws[3].x);
+const foreExtension = Math.max(...forePawXs) - Math.min(...forePawXs);
+assert.ok(foreExtension >= 110,
+  `Foreleg extension is ${foreExtension.toFixed(1)}px; Yuri spans about 120px at this size`);
+for (const [name, bounds] of [
+  ['hip', {x: 100, y: 209, width: 50, height: 30}],
+  ['shoulder', {x: 282, y: 207, width: 47, height: 30}],
+]) {
+  let changed = 0, sampled = 0;
+  for(let y=bounds.y;y<bounds.y+bounds.height;y++)for(let x=bounds.x;x<bounds.x+bounds.width;x++) {
+    const p=(y*size+x)*4;
+    // The body bob has the same phase half a gait cycle apart.
+    const q=p;
+    const difference=Math.abs(poses[0][p]-poses[12][q])+Math.abs(poses[0][p+1]-poses[12][q+1])+Math.abs(poses[0][p+2]-poses[12][q+2]);
+    if(poses[0][p+3]>=128&&poses[12][q+3]>=128) {
+      sampled++;
+      if(difference>27)changed++;
     }
   }
-  assert.ok(pixels.length, 'Expected a visible forepaw near the ground');
-  const tips = pixels.filter(({y}) => y >= bottom - 4);
-  return {x: tips.reduce((sum, tip) => sum + tip.x, 0) / tips.length, bottom};
+  assert.ok(changed/sampled>=0.45, `${name} is held fixed while the paws move (${(changed/sampled*100).toFixed(0)}% changed)`);
+}
+for(let leg=0;leg<4;leg++) {
+  const angles=walk.legJoints.map(joints=>Math.atan2(
+    joints[leg][2][0]-joints[leg][1][0],joints[leg][2][1]-joints[leg][1][1])*180/Math.PI);
+  assert.ok(Math.max(...angles)-Math.min(...angles)>=35, `Leg ${leg} does not swing at its attachment`);
+  if(leg%2===0) {
+    assert.ok(Math.max(...angles)-Math.min(...angles)<=70,
+      `Hind thigh rotates too far: ${(Math.max(...angles)-Math.min(...angles)).toFixed(1)} degrees`);
+    const bends=walk.legJoints.map(joints=>{
+      const [knee,hock,ankle]=joints[leg].slice(2,5);
+      const calf=[hock[0]-knee[0],hock[1]-knee[1]];
+      const metatarsal=[ankle[0]-hock[0],ankle[1]-hock[1]];
+      return Math.acos(Math.max(-1,Math.min(1,
+        (calf[0]*metatarsal[0]+calf[1]*metatarsal[1])/
+        (Math.hypot(...calf)*Math.hypot(...metatarsal)))))*180/Math.PI;
+    });
+    assert.ok(bends.filter(angle=>angle>15).length>=18,
+      'Hock remains straight instead of flexing independently');
+    const kneeFlexion=walk.legJoints.map(joints=>{
+      const [hip,knee,hock]=joints[leg].slice(1,4);
+      const thigh=[knee[0]-hip[0],knee[1]-hip[1]];
+      const calf=[hock[0]-knee[0],hock[1]-knee[1]];
+      return Math.acos(Math.max(-1,Math.min(1,
+        (thigh[0]*calf[0]+thigh[1]*calf[1])/(Math.hypot(...thigh)*Math.hypot(...calf)))))*180/Math.PI;
+    });
+    assert.ok(Math.max(...kneeFlexion)<=45, 'Hind knee folds too deeply during recovery');
+    assert.ok(Math.max(...bends)<=105, 'Hock folds too deeply during recovery');
+  } else {
+    const elbowFlexion=walk.legJoints.map(joints=>{
+      const [shoulder,elbow,,wrist]=joints[leg].slice(1,5);
+      const upper=[elbow[0]-shoulder[0],elbow[1]-shoulder[1]];
+      const lower=[wrist[0]-elbow[0],wrist[1]-elbow[1]];
+      return Math.acos(Math.max(-1,Math.min(1,
+        (upper[0]*lower[0]+upper[1]*lower[1])/(Math.hypot(...upper)*Math.hypot(...lower)))))*180/Math.PI;
+    });
+    assert.ok(Math.max(...elbowFlexion)<=45,
+      `Fore elbow folds too deeply: ${Math.max(...elbowFlexion).toFixed(1)} degrees`);
+  }
+}
+const contacts = new Array(4).fill(0);
+const observed = new Array(4).fill(0);
+
+function sole(frame, paw, overlapping) {
+  if (Math.abs(paw.x - overlapping.x) < 34 && Math.abs(paw.y - overlapping.y) < 16) return null;
+  const soleRows = [];
+  for (let y = Math.round(paw.y + 1); y >= paw.y - 5; y--) {
+    let row = [];
+    for (let x = Math.round(paw.x - 20); x <= paw.x + 20; x++) {
+      if (alpha(frame, x, y) >= 128) row.push(x);
+    }
+    if (row.length === 0) continue;
+    soleRows.push(...row);
+    if (soleRows.length >= 12) break;
+  }
+  assert.ok(soleRows.length >= 8, 'Missing opaque sole at the annotated planted foot');
+  return soleRows.reduce((sum, x) => sum + x, 0) / soleRows.length;
 }
 
-const clock = fs.readFileSync(path.join(project, 'src/reference_walk.h'), 'utf8');
-const stride = Number(clock.match(/#define REFERENCE_STRIDE (\d+)u/)[1]);
-const movement = size * stride / (256 * frames.length);
-const contacts = [
-  frames.slice(0, 4).map(frame => foot(frame)),
-  [foot(frames[4], 325), ...frames.slice(5).map(frame => foot(frame))],
-];
 let maxSlide = 0;
-for (const stance of contacts) {
-  for (let i = 1; i < stance.length; i++) {
-    maxSlide = Math.max(maxSlide, Math.abs(stance[i].x - stance[i - 1].x + movement));
+for (let i = 0; i < poses.length; i++) {
+  const next = (i + 1) % poses.length;
+  const feet = walk.pawPositions[i], nextFeet = walk.pawPositions[next];
+  assert.ok(feet.filter(paw => paw.planted).length >= 2, 'A walking pose lost support');
+  for (let leg = 0; leg < feet.length; leg++) {
+    const paw = feet[leg], following = nextFeet[leg], other = (leg + 2) % 4;
+    if (!paw.planted && following.planted) contacts[leg]++;
+    if (!paw.planted || !following.planted) continue;
+    assert.ok(Math.abs(following.x - paw.x + movement) < 0.001 && following.y === paw.y,
+      `Paw ${leg} drifts while planted between poses ${i} and ${next}`);
+    // At push-off the pad rolls off the planted toe, so its centroid moves.
+    // Measure the flat part of stance when the full sole has ground contact.
+    if(Math.max(Math.abs(paw.pitch??0),Math.abs(following.pitch??0))>3)continue;
+    const first = sole(poses[i], paw, feet[other]);
+    const last = sole(poses[next], following, nextFeet[other]);
+    if (first === null || last === null) continue;
+    observed[leg]++;
+    maxSlide = Math.max(maxSlide, Math.abs(last - first + movement));
   }
 }
-
-let changed = 0;
-let union = 0;
-for (let y = 275; y < 349; y++) {
-  for (let x = 212; x < 410; x++) {
-    const end = alpha(frames[7], x, y) >= 128;
-    const start = alpha(frames[0], x, y) >= 128;
-    if (start || end) union++;
-    if (start !== end) changed++;
-  }
-}
-const seamChange = changed / union;
-assert.ok(maxSlide <= 4 && seamChange >= 0.40,
-  `Forepaw slip ${maxSlide.toFixed(1)}px (limit 4px); loop foreleg silhouette change ${(seamChange * 100).toFixed(0)}% (minimum 40%)`);
-const outgoing = foot(frames[4], 270, 322);
-assert.ok(Math.abs(outgoing.x - contacts[0][3].x + movement) <= 4,
-  'Trailing forepaw slips during the transfer to the next stance');
-for (const stance of contacts) {
-  const heights = stance.map(({bottom}) => bottom);
-  assert.ok(Math.max(...heights) - Math.min(...heights) <= 3, 'Planted forepaw bobs off the floor');
-}
-console.log(`onyankopon walk: maximum stance slip ${maxSlide.toFixed(1)}px at 425px; loop silhouette changes ${(seamChange * 100).toFixed(0)}% PASS`);
+assert.ok(contacts.every(count => count === 1), 'Each paw should touch down once each cycle');
+assert.ok(observed.every(count => count >= 3), 'Not enough isolated sole samples for all four feet');
+assert.ok(maxSlide <= 4, `Rasterized sole drift ${maxSlide.toFixed(1)}px at 425px`);
+console.log(`onyankopon walk: stable coat, belly depth, F01/F02 leg width, visible hip/shoulder swing, ${foreExtension.toFixed(1)}px foreleg extension, ${maxSlide.toFixed(1)}px maximum sole drift at 425px PASS`);

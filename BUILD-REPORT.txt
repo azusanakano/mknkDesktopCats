@@ -1,22 +1,35 @@
-mknkDesktopCats v1.9.4 — 2026-11-17
+mknkDesktopCats v1.9.8 — 2026-11-18
 Windows x64 / ネコシステム社
 
-オニャンコポンの歩行8コマを更新
-・F01・F02の前足の幅を元絵の輪郭に合わせた。
-・コマ間とコマ内の前足を画面の移動量に合わせて補正した。
-・F08で上げた前足をF01で着地させた。
-・組み込みのImageGenに、茶トラの体と姿勢を保ちながら、腹下だけをゆりちゃんと同程度の毛足にするよう指定した。
-  生成結果から腹毛を切り出し、8コマの腹下に合成した。
+オニャンコポンの歩行を更新
+・前足を上げる際の肘の過度な折れ込みを抑えた。足の持ち上げを低くし、上腕と前腕の長さ、奥側の肩の高さを調整した。
+・両前足の最大曲げ角45度以下、脚の太さ、歩幅、接地を回帰テストで検査した。
+・F04を基準に茶トラの毛色と模様を統一し、脇腹の縞と陰影を腹毛までつないだ。
+・8つの基本姿勢に16の中間姿勢を加え、前足と後ろ足を順に接地させた。
+・肩と股関節から脚全体を振るよう、上腕・太ももの付け根からメッシュを動かした。
+・前足の振り幅は425px素材で約68pxから約119pxへ広げた。ゆりちゃんは約120px。
+・標準224pxでは1.2秒の歩行周期で98px進む。
+・後ろ足の膝とかかとを独立させた。描画上の膝の最大曲げ角を約102〜104度から約36度へ抑えた。
+・後ろ足の持ち上げを低くし、蹴り出しでは足裏をつま先の周りに傾ける。
 
-検証
-・Windows用のMSVCとSDKでWindows x64 EXEをビルド。Bashのビルド環境がないため、同じC・Node.js・PythonのテストをWindowsから個別に実行した。
-・3サイズと左右両方向の描画、前足の幅、接地、ループ、ゆりちゃんと比較した腹下の深さの検証に合格。
-・前足のコマ間の接地ずれは425pxの素材座標で最大1.6px。
-・28枚の画像、原画JPEG、他の歩行・休息画像、版情報、Windows DLLの依存関係を確認した。
-・Windows上で標準224pxのオニャンコポンを起動し、歩行中の位置を読み取った。x座標450から314まで移動し、y座標290を維持した。
-・HTMLプレビューの構文と埋め込み画像を確認した。MP4はWindows Media Foundationでエンコード・復号し、向きとサイズを確認した。
+目視と検証
+・実際のEXEを画面取得できる確認モードで起動。224px・通常速度でオニャンコポンを複数周歩かせ、前足を持ち上げて前へ運ぶ姿勢とループを連続して目視した。
+・確認モードは起動プロセスの MKNK_DESKTOP_REVIEW=1 で選択する。猫のウィンドウを画面取得対象にし、初期の歩行時間を延ばす。
+・膝の過度な折れ込み、太ももの過度な回転、かかとの関節の角度を回帰テストで検査した。
+・足裏全体で接地する区間のサンプルのずれは、425pxの素材座標で最大0.4pxだった。蹴り出しではつま先を支点に足裏を傾ける。
+・Windows上のMSVCとWindows SDKでビルドした。Cの6テストとNode.js・Pythonによる画像とEXEの検証をWindowsから個別に実行した。
+・原画JPEG、F01・F02の前足の太さ、ゆりちゃんと比べた腹の深さ、44枚の組み込み画像、3サイズと左右両方向、休息画像、版番号を検証した。
+・フォルダー直下のEXEを通常モードで起動し、初期配置後の歩行中に106回位置を確認した。x座標447から132へ移動し、y座標290、幅224pxを保持した。
+・HTMLに埋め込んだ24姿勢が描画用素材と一致し、1周後にF01へ戻ることを確認した。
 ・CPU使用率は未測定。
 
-修正版の実行ファイル  source/dist/mknkDesktopCats.exe
-SHA-256  41ad0d64f04ac9810674ff04887b673eb401d4bb650d84fe2737f904bb7b3f79
-ルートの実行ファイルはWindowsのファイルロックにより差し替えできなかった。
+実行ファイル  mknkDesktopCats.exe
+ビルド出力  source/dist/mknkDesktopCats.exe
+SHA-256  cd1be6c5ec7cd2197f9626940b799d5901a14b36b5060ba6951a15cf509ff35a
+
+画像素材
+組み込みImageGenでオニャンコポンのF04を編集し、ゆりちゃんのF01を毛量の参考に使用した。
+保存先  source/art_source/overlays/onyankopon_walk_fur.png
+
+ImageGen prompt
+Use case: precise-object-edit. Asset type: source for the animated desktop sprite Onyankopon. Edit image 1, the illustrated brown and black mackerel tabby facing to the right. Image 2, the white calico, is a reference for belly coat volume only. Edit only the brown tabby's lower flank and full exposed abdomen between the hind thigh and chest. Extend the entire curved underside there by about 4% of the animal's total head-to-paw height: a soft, slightly rounded, richly textured fluffy overhang blended gradually into the flank, shaded continuously with his existing dark brown, subtle russet, and black striped fur. The same brown fur and stripes should continue down from the existing flank right into the new tufts. The underbelly is slightly in shadow. The silhouette must have soft fine fur tapered in several different directions across the whole belly, no isolated bright tuft, no horizontal joining line, no cream patch, smooth transition into the hip and chest. Match the exact placement and proportions of image 1; same 4 paws and the same mid-step pose, head, back, tail, and fixed upright side-profile angle. Keep the exact framing and canvas margins. Full body with all extremities, isolated RGBA cutout with true transparent background, no floor, no cast shadow, no text, no other cat. Preserve the realistic naturalistic painting finish and the original identity.

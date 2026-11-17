@@ -3,19 +3,20 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {importReference,SOURCES,CELL_SIZE,FRAME_COUNT,CYCLE_MS} from './import_reference.mjs';
 import {importRest,REST_COUNT,REST_ACTIONS} from './import_rest.mjs';
-import {correctOnyankoponWalk, onyankoponWalkReport} from './onyankopon_walk.mjs';
+import {
+  correctOnyankoponWalk, onyankoponWalkReport, WALK_CYCLE_COLUMNS, WALK_POSES_PER_FRAME,
+} from './onyankopon_walk.mjs';
 const require=createRequire(import.meta.url);
 const sharp=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
   ? require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'sharp')):require('sharp');
 const [,,sourceDir,outputDir]=process.argv;
 if(!sourceDir||!outputDir) throw new Error('usage: build_assets.mjs <reference-dir> <output-dir>');
-const n=CELL_SIZE,frames=[],reports={},restReports={};
+const n=CELL_SIZE,frames=[],extraPoses=[],reports={},restReports={};
 const totalFrames=FRAME_COUNT+REST_COUNT;
 const restDir=path.join(path.dirname(sourceDir),'rest');
-const bellyPath=path.join(path.dirname(sourceDir),'overlays','onyankopon_belly_fur.png');
-const {data:bellyPixels,info:bellyInfo}=await sharp(bellyPath).ensureAlpha().raw().toBuffer({resolveWithObject:true});
-const belly={pixels:bellyPixels,width:bellyInfo.width,height:bellyInfo.height};
-if(belly.width!==52||belly.height!==29) throw new Error('Unexpected Onyankopon belly artwork dimensions');
+const paintedPath=path.join(path.dirname(sourceDir),'overlays','onyankopon_walk_fur.png');
+const {data:painted,info:paintedInfo}=await sharp(paintedPath).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+if(paintedInfo.width!==n||paintedInfo.height!==n) throw new Error('Unexpected Onyankopon artwork dimensions');
 for(const dir of [outputDir,path.join(outputDir,'walk'),path.join(outputDir,'rest')]) fs.mkdirSync(dir,{recursive:true});
 function writeComplete(file,bytes) {
   const temporary=file+'.tmp';
@@ -47,26 +48,37 @@ function encode(rgba) {
   }
   return Buffer.concat(chunks);
 }
+async function writeSheet(file, cells, columns) {
+  const rows=Math.ceil(cells.length/columns);
+  const sheet=Buffer.alloc(n*n*columns*rows*4);
+  for(let slot=0;slot<cells.length;slot++) for(let y=0;y<n;y++) {
+    const dest=((Math.floor(slot/columns)*n+y)*n*columns+(slot%columns)*n)*4;
+    cells[slot].copy(sheet,dest,y*n*4,(y+1)*n*4);
+  }
+  const png=await sharp(sheet,{raw:{width:n*columns,height:n*rows,channels:4}})
+    .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
+  writeComplete(path.join(outputDir,file),png);
+}
 for(const name of Object.keys(SOURCES)) {
   const sourcePath=path.join(sourceDir,SOURCES[name].file);
   const {cells: sourceCells,report}=await importReference(sharp,sourcePath,name);
-  const cells=name==='onyankopon'?correctOnyankoponWalk(sourceCells,n,belly):sourceCells;
-  if(name==='onyankopon') report.walkCorrection=onyankoponWalkReport(cells,belly);
+  let cells=sourceCells;
+  if(name==='onyankopon') {
+    const walk=correctOnyankoponWalk(sourceCells,n,painted);
+    cells=walk.cells;
+    report.walkCorrection=onyankoponWalkReport(walk,painted,n);
+    for(const [i,pose] of walk.poses.entries()) {
+      if(i%WALK_POSES_PER_FRAME!==0) extraPoses.push(encode(pose));
+    }
+    await writeSheet('onyankopon_walk_cycle.png',walk.poses,WALK_CYCLE_COLUMNS);
+  }
   for(let slot=0;slot<FRAME_COUNT;slot++) {
     const png=await sharp(cells[slot],{raw:{width:n,height:n,channels:4}})
       .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
     writeComplete(path.join(outputDir,'walk',`${name}_walk_${String(slot+1).padStart(2,'0')}.png`),png);
     frames.push(encode(cells[slot]));
   }
-  // Assemble the exact frames used by the executable.
-  const sheet=Buffer.alloc(n*4*n*2*4);
-  for(let slot=0;slot<FRAME_COUNT;slot++) for(let y=0;y<n;y++) {
-    const dest=((Math.floor(slot/4)*n+y)*n*4+(slot%4)*n)*4;
-    cells[slot].copy(sheet,dest,y*n*4,(y+1)*n*4);
-  }
-  const sheetPng=await sharp(sheet,{raw:{width:n*4,height:n*2,channels:4}})
-    .png({compressionLevel:9,adaptiveFiltering:true}).toBuffer();
-  writeComplete(path.join(outputDir,`${name}_walk8.png`),sheetPng);
+  await writeSheet(`${name}_walk8.png`,cells,4);
   reports[name]=report;
   const rest=await importRest(sharp,restDir,name);
   if(rest.cells.length!==REST_COUNT) throw new Error('Incorrect restored pose count');
@@ -80,17 +92,21 @@ for(const name of Object.keys(SOURCES)) {
   }
   restReports[name]=rest.report;
 }
-const header=Buffer.alloc(24+frames.length*8);header.write('MKCT',0,'ascii');
-[1,n,n,2,totalFrames].forEach((v,i)=>header.writeUInt32LE(v,4+i*4));
+// Format 2 keeps the two cats' original slot indices and appends the
+// additional Onyankopon poses in playback order.
+frames.push(...extraPoses);
+const header=Buffer.alloc(28+frames.length*8);header.write('MKCT',0,'ascii');
+[2,n,n,2,totalFrames,extraPoses.length].forEach((v,i)=>header.writeUInt32LE(v,4+i*4));
 let offset=header.length;
-frames.forEach((bytes,i)=>{header.writeUInt32LE(offset,24+i*8);header.writeUInt32LE(bytes.length,28+i*8);offset+=bytes.length;});
+frames.forEach((bytes,i)=>{header.writeUInt32LE(offset,28+i*8);header.writeUInt32LE(bytes.length,32+i*8);offset+=bytes.length;});
 const blob=Buffer.concat([header,...frames]);
 fs.writeFileSync(path.join(outputDir,'sprites.rle'),blob);
 fs.writeFileSync(path.join(outputDir,'reference-import.json'),JSON.stringify(reports,null,2));
 fs.writeFileSync(path.join(outputDir,'rest-import.json'),JSON.stringify(restReports,null,2));
 fs.writeFileSync(path.join(outputDir,'asset-report.json'),JSON.stringify({version:fs.readFileSync(new URL('../VERSION',import.meta.url),'utf8').trim(),width:n,height:n,cats:2,
   framesPerCat:totalFrames,walkingFramesPerCat:FRAME_COUNT,restingFramesPerCat:REST_COUNT,
-  restActions:REST_ACTIONS,frameOrder:'F01..F08, sit, sleep, stretch, paw, jump, alert',normalCycleMs:CYCLE_MS.normal,
-  cycleMs:CYCLE_MS,encodedBytes:blob.length,uncompressedBytes:2*totalFrames*n*n*4,
+  onyankoponWalkingPoses:FRAME_COUNT+extraPoses.length,onyankoponCycleColumns:WALK_CYCLE_COLUMNS,
+  restActions:REST_ACTIONS,frameOrder:'F01..F08, sit, sleep, stretch, paw, jump, alert; then Onyankopon in-between poses',normalCycleMs:CYCLE_MS.normal,
+  cycleMs:CYCLE_MS,encodedBytes:blob.length,uncompressedBytes:frames.length*n*n*4,
   originalSourceBytesPreserved:true,sourceRgbPreserved:false,wholeFrameUniformResampling:true,alphaEstimated:true,displayFormat:'premultiplied BGRA'},null,2));
-console.log(`sprites: 2 cats x (${FRAME_COUNT} walk + ${REST_COUNT} restored poses), ${n} x ${n}, ${blob.length} bytes`);
+console.log(`sprites: ${FRAME_COUNT} Yuri and ${FRAME_COUNT+extraPoses.length} Onyankopon walking poses, ${REST_COUNT} restored poses per cat, ${blob.length} bytes`);
