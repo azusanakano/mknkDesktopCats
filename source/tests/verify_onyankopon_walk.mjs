@@ -16,27 +16,34 @@ const frames = await Promise.all(Array.from({length: 8}, (_, slot) =>
   sharp(path.join(assets, `onyankopon_walk_0${slot + 1}.png`)).ensureAlpha().raw().toBuffer()));
 const yuriFrames = await Promise.all(Array.from({length: 8}, (_, slot) =>
   sharp(path.join(assets, `yuri_walk_0${slot + 1}.png`)).ensureAlpha().raw().toBuffer()));
+const original = await importReference(sharp, path.join(project, 'art_source/reference/onyankopon_walk_sheet.jpg'), 'onyankopon');
 
 const alpha = (frame, x, y) => frame[(y * size + x) * 4 + 3];
-// Allow the torso to bob but check that its coat does not change between poses.
+// Align each fur column vertically so a tilting torso does not look like a
+// recolored coat. No horizontal shift, scaling or color adjustment is allowed.
 for (const [slot, frame] of frames.entries()) {
-  let best = Infinity;
-  for (let dy = -4; dy <= 4; dy++) {
-    let total = 0;
-    let samples = 0;
-    for (let y = 176; y < 209; y += 2) {
-      for (let x = 176; x < 257; x += 2) {
+  let total = 0, columns = 0;
+  for (let x = 176; x < 257; x += 2) {
+    let best = Infinity;
+    for (let dy = -12; dy <= 12; dy += 0.5) {
+      let difference = 0, samples = 0;
+      for (let y = 176; y < 209; y += 2) {
         const first = (y * size + x) * 4;
-        const second = ((y + dy) * size + x) * 4;
+        const row = Math.floor(y + dy), fraction = y + dy - row;
+        const second = (row * size + x) * 4;
         for (let c = 0; c < 3; c++) {
-          total += Math.abs(frames[0][first + c] - frame[second + c]);
+          const aligned = frame[second + c] * (1 - fraction) + frame[second + size * 4 + c] * fraction;
+          difference += Math.abs(frames[0][first + c] - aligned);
           samples++;
         }
       }
+      best = Math.min(best, difference / samples);
     }
-    best = Math.min(best, total / samples);
+    total += best;
+    columns++;
   }
-  assert.ok(best <= 6, `F0${slot + 1} coat pattern changes after alignment (${best.toFixed(1)} RGB levels)`);
+  const difference = total / columns;
+  assert.ok(difference <= 6, `F0${slot + 1} coat pattern changes after alignment (${difference.toFixed(1)} RGB levels)`);
 }
 
 function bellyEdge(frame) {
@@ -47,7 +54,16 @@ function bellyEdge(frame) {
   });
   return heights.sort((a, b) => a - b)[2];
 }
-const bellyDifference = frames.map((frame, slot) => bellyEdge(frame) - bellyEdge(yuriFrames[slot]));
+function backEdge(frame) {
+  let y = 100;
+  while (y < 180 && alpha(frame, 215, y) < 128) y++;
+  return y;
+}
+// Compare coat depth at the source torso height, independently of the new
+// weight-transfer motion. Read the displacement from pixels, not metadata.
+const sourceBack = backEdge(original.cells[3]);
+const bellyDifference = frames.map((frame, slot) =>
+  bellyEdge(frame) - (backEdge(frame) - sourceBack) - bellyEdge(yuriFrames[slot]));
 assert.ok(Math.abs(bellyDifference.reduce((sum, n) => sum + n, 0) / frames.length) <= 4 &&
   bellyDifference.every(n => Math.abs(n) <= 8),
   `Belly depth should be comparable to Yuri: ${bellyDifference.join(', ')}px`);
@@ -60,7 +76,6 @@ function rightForelegWidth(frame, y) {
   return right - x;
 }
 
-const original = await importReference(sharp, path.join(project, 'art_source/reference/onyankopon_walk_sheet.jpg'), 'onyankopon');
 for (const [slot, donor] of [4, 3].entries()) {
   for (const y of [280, 295, 308, 320]) {
     const width = rightForelegWidth(frames[slot], y);
@@ -77,12 +92,45 @@ const poses = await Promise.all(Array.from({length: 24}, (_, pose) =>
   cycle.clone().extract({left: pose % 6 * size, top: Math.floor(pose / 6) * size, width: size, height: size})
     .raw().toBuffer()));
 const movement = walk.stride / poses.length;
+// Measure the opaque back outline at the shoulder. A tiny translation can
+// disappear at desktop size even if a nonzero bob exists in the generator.
+const shoulderBack = poses.map(pose => {
+  let edge = 425;
+  for (let x = 284; x <= 302; x += 3) {
+    let y = 120;
+    while (y < 180 && alpha(pose, x, y) < 128) y++;
+    edge = Math.min(edge, y);
+  }
+  return edge;
+});
+const shoulderTravel = (Math.max(...shoulderBack) - Math.min(...shoulderBack)) * 224 / 425;
+assert.ok(shoulderTravel >= 3.5 && shoulderTravel <= 6.5,
+  `Shoulder motion is ${shoulderTravel.toFixed(1)}px at desktop size`);
+for (let i = 0; i < poses.length; i++) {
+  assert.ok(Math.abs(shoulderBack[(i + 1) % poses.length] - shoulderBack[i]) <= 3,
+    `Shoulder jumps between poses ${i} and ${(i + 1) % poses.length}`);
+}
 // A foot-only shuffle can pass the sole-drift checks. Also require comparable
 // forward/backward extension to Yuri and visible motion high on each limb.
 const forePawXs = walk.pawPositions.map(paws => paws[3].x);
 const foreExtension = Math.max(...forePawXs) - Math.min(...forePawXs);
 assert.ok(foreExtension >= 110,
   `Foreleg extension is ${foreExtension.toFixed(1)}px; Yuri spans about 120px at this size`);
+const hindExtension = [];
+for (const [leg, side, minimum] of [[0, 'far', 78], [2, 'near', 62]]) {
+  const paws = walk.pawPositions.map(pose => pose[leg]);
+  const wrap = i => (i + paws.length) % paws.length;
+  const liftOff = paws.findIndex((paw, i) => !paw.planted && paws[wrap(i - 1)].planted);
+  assert.ok(liftOff >= 0, `Missing ${side} hind toe-off`);
+  const ground = paws[wrap(liftOff - 1)].y;
+  // Measure against the hip and only at ground level or just above it.
+  // Throwing the paw further back after lifting it is not a longer push-off.
+  const steps = [-1, 0, 1].map(offset => wrap(liftOff + offset)).filter(i => ground - paws[i].y <= 8);
+  const extension = Math.max(...steps.map(i => walk.legJoints[i][leg][1][0] - paws[i].x));
+  assert.ok(extension >= minimum,
+    `${side} hind paw reaches only ${extension.toFixed(1)}px behind the hip at toe-off`);
+  hindExtension.push(extension);
+}
 for (const [name, bounds] of [
   ['hip', {x: 100, y: 209, width: 50, height: 30}],
   ['shoulder', {x: 282, y: 207, width: 47, height: 30}],
@@ -181,4 +229,4 @@ for (let i = 0; i < poses.length; i++) {
 assert.ok(contacts.every(count => count === 1), 'Each paw should touch down once each cycle');
 assert.ok(observed.every(count => count >= 3), 'Not enough isolated sole samples for all four feet');
 assert.ok(maxSlide <= 4, `Rasterized sole drift ${maxSlide.toFixed(1)}px at 425px`);
-console.log(`onyankopon walk: stable coat, belly depth, F01/F02 leg width, visible hip/shoulder swing, ${foreExtension.toFixed(1)}px foreleg extension, ${maxSlide.toFixed(1)}px maximum sole drift at 425px PASS`);
+console.log(`onyankopon walk: stable coat, belly depth, F01/F02 leg width, ${shoulderTravel.toFixed(1)}px shoulder travel at 224px, visible hip/shoulder swing, ${foreExtension.toFixed(1)}px foreleg extension, ${hindExtension.map(px => px.toFixed(1)).join('/')}px hind extension at toe-off, ${maxSlide.toFixed(1)}px maximum sole drift at 425px PASS`);

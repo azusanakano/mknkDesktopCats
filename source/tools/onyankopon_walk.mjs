@@ -9,6 +9,7 @@ const ONYANKOPON_STRIDE = constant('ONYANKOPON_STRIDE');
 export const WALK_CYCLE_COLUMNS = 6;
 const referencePose = 4;
 const tau = 2 * Math.PI;
+const hindPushOffPitch = 26;
 
 // Coordinates on the 425px artwork. The uncut torso and the two near-side
 // limbs share the same painted fur texture. Side cuts follow the gaps between
@@ -35,11 +36,12 @@ const fore = {
 
 // Touchdowns proceed near fore, far hind, far fore, near hind, then repeat.
 // Each hind paw lands one fifth of a cycle before the forepaw on its side.
+// The hind toes stay down as the hip advances into the push-off.
 // The far ground line is slightly higher in the side view.
 const legs = [
-  {art: hind, far: true, touch: 7 / 24, duty: 7 / 12, reach: 174, ground: 338, height: 14},
+  {art: hind, far: true, touch: 7 / 24, duty: 2 / 3, reach: 174, ground: 338, height: 14},
   {art: fore, far: true, touch: 1 / 2, duty: 5 / 8, reach: 357, ground: 338, height: 10},
-  {art: hind, far: false, touch: 19 / 24, duty: 7 / 12, reach: 185, ground: 346, height: 16},
+  {art: hind, far: false, touch: 19 / 24, duty: 2 / 3, reach: 185, ground: 346, height: 16},
   {art: fore, far: false, touch: 0, duty: 5 / 8, reach: 369, ground: 346, height: 12},
 ];
 
@@ -117,34 +119,50 @@ function pawAt(leg, time, stride) {
   // During stance the local paw travels exactly as far back as the cat
   // travels forward. A cubic swing matches the stance speed at both ends.
   const phase = ((time - leg.touch) % 1 + 1) % 1;
+  const isHind = leg.art === hind;
   if (phase < leg.duty) return {
     x: leg.reach - stride * phase, lift: 0, planted: true, phase,
-    pitch: leg.art === hind ? 12 * fade(leg.duty * 0.78, leg.duty, phase) : 0,
+    pitch: isHind ? hindPushOffPitch * fade(leg.duty * 0.78, leg.duty, phase) : 0,
   };
   const t = (phase - leg.duty) / (1 - leg.duty);
   const followThrough = -stride * (1 - leg.duty) * t * (1 - t) * (1 - 2 * t);
   const x = mix(leg.reach - stride * leg.duty, leg.reach, fade(0, 1, t)) + followThrough;
-  const heightPhase = leg.art === hind ? t + 0.16 * Math.sin(Math.PI * t) : t;
+  const heightPhase = isHind ? t + 0.16 * Math.sin(Math.PI * t) : t;
   return {x, lift: leg.height * Math.sin(Math.PI * heightPhase) ** 1.35, planted: false, phase,
-    pitch: leg.art === hind ? 12 * (1 - fade(0, 0.45, t)) - 10 * Math.sin(Math.PI * t) ** 2 : 0};
+    pitch: isHind ? hindPushOffPitch * (1 - fade(0, 0.45, t)) - 10 * Math.sin(Math.PI * t) ** 2 : 0};
 }
 
-function paintRow(canvas, texture, n, y, sourceY, xOffset, width, axis, shade, opacity = 1) {
-  const sy = Math.floor(sourceY), fy = sourceY - sy;
-  if (sy < 0 || sy >= n - 1) return;
-  const start = Math.max(0, Math.ceil(axis + width * -axis + xOffset));
-  const end = Math.min(n, Math.floor(axis + width * (n - 1 - axis) + xOffset) + 1);
-  for (let x = start; x < end; x++) {
-    const from = axis + (x - axis - xOffset) / width;
-    const sx = Math.floor(from), fx = from - sx;
-    if (sx < 0 || sx >= n - 1) continue;
-    const p = (sy * n + sx) * 4, q = (y * n + x) * 4;
-    const at = c => mix(mix(texture[p + c], texture[p + 4 + c], fx),
-      mix(texture[p + n * 4 + c], texture[p + n * 4 + 4 + c], fx), fy);
-    const a = at(3) * opacity;
-    if (a <= 0) continue;
-    for (let c = 0; c < 3; c++) canvas[q + c] = shade * opacity * at(c) + (1 - a) * canvas[q + c];
-    canvas[q + 3] = a + (1 - a) * canvas[q + 3];
+function bodyMotion(time) {
+  // Two weight transfers per stride. The hip leads the shoulder slightly;
+  // the head follows with less travel so the cat does not nod excessively.
+  return {
+    hipY: 2.7 * Math.cos(2 * tau * (time - 0.06)),
+    shoulderY: 4.5 * Math.cos(2 * tau * (time - 0.08)),
+    headY: 2.4 * Math.cos(2 * tau * (time - 0.10)),
+  };
+}
+
+function bodyOffset(x, motion) {
+  const torso = mix(motion.hipY, motion.shoulderY, fade(128, 306, x));
+  return mix(torso, motion.headY, fade(335, 365, x));
+}
+
+function paintBody(canvas, texture, n, time, motion) {
+  const offsets = Array.from({length: n}, (_, x) => bodyOffset(x, motion));
+  for (let y = 48; y <= 285; y++) {
+    const tailSway = 3.4 * Math.sin(tau * time) * (1 - fade(54, 114, y));
+    for (let x = 0; x < n; x++) {
+      const u = x - tailSway, v = y - offsets[x];
+      const sx = Math.floor(u), sy = Math.floor(v), fx = u - sx, fy = v - sy;
+      if (sx < 0 || sx >= n - 1 || sy < 0 || sy >= n - 1) continue;
+      const p = (sy * n + sx) * 4, q = (y * n + x) * 4;
+      const at = c => mix(mix(texture[p + c], texture[p + 4 + c], fx),
+        mix(texture[p + n * 4 + c], texture[p + n * 4 + 4 + c], fx), fy);
+      const a = at(3);
+      if (a <= 0) continue;
+      for (let c = 0; c < 3; c++) canvas[q + c] = at(c) + (1 - a) * canvas[q + c];
+      canvas[q + 3] = a + (1 - a) * canvas[q + 3];
+    }
   }
 }
 
@@ -159,19 +177,23 @@ function elbow(root, end, upper, lower, bend) {
 }
 
 function footPoint(leg, paw, x, y) {
-  const pivotX = leg.art.toe + 8, pivotY = leg.art.spine[5][1];
+  // On the hind texture the front edge of the pad meets the ground just
+  // above the art baseline. Keep that point planted when the heel rises.
+  const toeHeight = leg.art === hind ? 1.5 : 0;
+  const pivotX = leg.art.toe + 8, pivotY = leg.art.spine[5][1] - toeHeight;
   const angle = paw.pitch * Math.PI / 180;
   const padWidth = leg.art === fore ? 1.08 : 1;
   const dx = (x - pivotX) * padWidth, dy = y - pivotY;
   return [paw.x + 8 + dx * Math.cos(angle) - dy * Math.sin(angle),
-    leg.ground - paw.lift + dx * Math.sin(angle) + dy * Math.cos(angle)];
+    leg.ground - paw.lift - toeHeight + dx * Math.sin(angle) + dy * Math.cos(angle)];
 }
 
-function legJoints(leg, paw, bob) {
+function legJoints(leg, paw, motion) {
   const back = leg.art === hind;
   const shift = leg.far ? (back ? 5 : -8) : 0;
   const shoulderHeight = 207 - (leg.far ? 8 : 0);
-  const root = [back ? 128 + shift : 306 + shift, (back ? 210 : shoulderHeight) + bob];
+  const rootX = back ? 128 + shift : 306 + shift;
+  const root = [rootX, (back ? 210 : shoulderHeight) + bodyOffset(rootX, motion)];
   const toeY = leg.ground - paw.lift;
   const ankle = footPoint(leg, paw, ...leg.art.spine[4]);
   let joint, shin;
@@ -198,7 +220,8 @@ function legJoints(leg, paw, bob) {
     shin = [mix(joint[0], ankle[0], 0.60), mix(joint[1], ankle[1], 0.60)];
   }
   // The attachment patch feathers onto the flank above the moving upper leg.
-  return [[back ? 128 + shift : 304 + shift, leg.art.start + bob],
+  const patchX = back ? 128 + shift : 304 + shift;
+  return [[patchX, leg.art.start + bodyOffset(patchX, motion)],
     root, joint, shin, ankle, [paw.x, toeY], [paw.x, toeY + 5]];
 }
 
@@ -282,16 +305,13 @@ function paintLeg(canvas, texture, n, leg, paw, joints) {
 
 function renderPose(body, textures, n, stride, time) {
   const canvas = new Float32Array(n * n * 4);
-  const bob = 1.8 * Math.cos(2 * tau * (time - 0.08));
+  const motion = bodyMotion(time);
   const paws = legs.map(leg => pawAt(leg, time, stride));
-  const joints = legs.map((leg, i) => legJoints(leg, paws[i], bob));
+  const joints = legs.map((leg, i) => legJoints(leg, paws[i], motion));
   for (const [i, leg] of legs.entries()) {
     if (!leg.far && legs[i - 1].far) {
       // The body covers the far-side hips and shoulders.
-      for (let y = 48; y <= 279; y++) {
-        const tailSway = 3.4 * Math.sin(tau * time) * (1 - fade(54, 114, y));
-        paintRow(canvas, body, n, y, y - bob, tailSway, 1, 0, 1);
-      }
+      paintBody(canvas, body, n, time, motion);
     }
     paintLeg(canvas, textures.get(leg.art), n, leg, paws[i], joints[i]);
   }
@@ -302,7 +322,7 @@ function renderPose(body, textures, n, stride, time) {
     if (!rgba[i + 3]) continue;
     for (let c = 0; c < 3; c++) rgba[i + c] = Math.round(canvas[i + c] / a);
   }
-  return {rgba, paws, joints};
+  return {rgba, paws, joints, motion};
 }
 
 export function correctOnyankoponWalk(cells, n, painted) {
@@ -318,6 +338,7 @@ export function correctOnyankoponWalk(cells, n, painted) {
       x: paws[i].x, y: leg.ground - paws[i].lift, planted: paws[i].planted, pitch: paws[i].pitch,
     }))),
     legJoints: poses.map(pose => pose.joints),
+    bodyMotion: poses.map(pose => pose.motion),
   };
 }
 
@@ -331,6 +352,7 @@ export function onyankoponWalkReport(walk, painted, n) {
     pawOrder: ['far hind', 'far fore', 'near hind', 'near fore'],
     pawPositions: walk.pawPositions,
     legJoints: walk.legJoints,
+    bodyMotion: walk.bodyMotion,
     runtimeRgbaSha256: walk.cells.map(hash),
     poseRgbaSha256: walk.poses.map(hash),
   };

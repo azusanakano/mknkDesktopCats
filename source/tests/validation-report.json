@@ -1,6 +1,6 @@
 {
   "result": "PASS",
-  "version": "1.9.8",
+  "version": "1.9.10",
   "cats": [
     {
       "name": "yuri",
@@ -284,11 +284,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "e0a83936d1026bd5bcaa360861d33122cdf8ee59c084fd0771d06165d34fc3a5",
           "preResizeRgbaSha256": "9737e1b3edcb7b9c81a2635b9b8ad00c6aae2191bcb4c29c0f77c2f02acd7d1c",
-          "rgbaSha256": "b4b66b5fc12f4e7f30b9209064f1c71b4e5182545aac8381d08d235059c8aefe",
-          "visiblePixels": 51271,
-          "opaquePixels": 16961,
+          "rgbaSha256": "671f92c32e4f0b8dab4bd9d0ebed1c546d56de78dc4f935d7337c4b2b89b6067",
+          "visiblePixels": 51552,
+          "opaquePixels": 16673,
           "groundExclusive": 348,
-          "partialAlphaPixels": 34310,
+          "partialAlphaPixels": 34879,
           "sourceGreenBackgroundPixelsRemoved": 196892,
           "sourceNeutralCorePixelsPreserved": 62536
         },
@@ -312,11 +312,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "4858b1a95f1dc349a4b2f702c9ed3b315f84ea8318a63ca648c593f21fe228e9",
           "preResizeRgbaSha256": "55be6f80ed92bac4eb82ca52d4de0d8e973519fa06b87c9393ed912d5281792d",
-          "rgbaSha256": "6a3193e0a1572cdbd914f6e13c46038855890f6ca6bbf3a96c5e1cfe879cd9b6",
-          "visiblePixels": 49056,
-          "opaquePixels": 18795,
+          "rgbaSha256": "8d1f277cd4791cc546254b4342f589941a8dc4e87686d198bf7439de847406c8",
+          "visiblePixels": 48602,
+          "opaquePixels": 19035,
           "groundExclusive": 348,
-          "partialAlphaPixels": 30261,
+          "partialAlphaPixels": 29567,
           "sourceGreenBackgroundPixelsRemoved": 197882,
           "sourceNeutralCorePixelsPreserved": 61590
         },
@@ -340,11 +340,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "96b0cd4d4b6d22e9e98b7ed985c7ce8fc061d1cfe932a6802912df9ac6b5e0f6",
           "preResizeRgbaSha256": "7ac250cb85482e0d2f7bfa66e760b68218191d9e1d1163e0f90d74bb1347f493",
-          "rgbaSha256": "d4f917405ee7ad31831052d72bf0f14d22b256176d4a511bb088b7835bed64aa",
-          "visiblePixels": 50386,
-          "opaquePixels": 17034,
+          "rgbaSha256": "1d905d4b853f1651b2a04aa54ac9ba77598324bc34eb2107ab8551cd818ad429",
+          "visiblePixels": 50447,
+          "opaquePixels": 17174,
           "groundExclusive": 348,
-          "partialAlphaPixels": 33352,
+          "partialAlphaPixels": 33273,
           "sourceGreenBackgroundPixelsRemoved": 199752,
           "sourceNeutralCorePixelsPreserved": 59935
         },
@@ -368,11 +368,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "8a9f87b67009cdc68d614ca57f4ed9f832912d0e0812dec64a1eb57a95de4a8e",
           "preResizeRgbaSha256": "74417607d68864a44b80b1cc10a12c9b0962a5b31acddce3fe38aa8de7e474ad",
-          "rgbaSha256": "95e24da6daef2a6506b29d11fdb16ed85386373d68156a74ad9958a014dc6f55",
-          "visiblePixels": 49485,
-          "opaquePixels": 17619,
+          "rgbaSha256": "506769d9434e5f6b52d31be3f0e209dac20af2ee37f4dbad217a46741377f319",
+          "visiblePixels": 49158,
+          "opaquePixels": 17955,
           "groundExclusive": 348,
-          "partialAlphaPixels": 31866,
+          "partialAlphaPixels": 31203,
           "sourceGreenBackgroundPixelsRemoved": 198504,
           "sourceNeutralCorePixelsPreserved": 60912
         },
@@ -396,11 +396,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "07552c35e8c600ec35f60acbb315e7e0201a6e9d19735c900ba8f757b3fe1e39",
           "preResizeRgbaSha256": "a596841c84f2a45199dd8bea3036cee3869647354c5a2f1ef31702a66f3e1112",
-          "rgbaSha256": "dad9d7a1e16afb7ab52807ea65ff3b2959a80e216f7b6f323518c8c6285ad744",
-          "visiblePixels": 49950,
-          "opaquePixels": 17266,
+          "rgbaSha256": "f574f71055de5df2785008cca072fe370ad81574fb23ca7448b85cd67288dc18",
+          "visiblePixels": 50760,
+          "opaquePixels": 16645,
           "groundExclusive": 348,
-          "partialAlphaPixels": 32684,
+          "partialAlphaPixels": 34115,
           "sourceGreenBackgroundPixelsRemoved": 196690,
           "sourceNeutralCorePixelsPreserved": 62271
         },
@@ -424,11 +424,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "c6ca2bbb18cfb9656df1b8200d9e5c442984127b1ade252d7a9375d0173f9ebc",
           "preResizeRgbaSha256": "157b9ae1303d7ee393e9b2267bcc3e92412e86e53da3a7765474f4f8ecfa929b",
-          "rgbaSha256": "67cfde643c3339954ee35110925cf2a357ddb450d94972beaf1e94a12a286490",
-          "visiblePixels": 49428,
-          "opaquePixels": 17644,
+          "rgbaSha256": "12b234b203da9c81173b7b7546479aca12979af7e67621a7e73eacc39de08b7a",
+          "visiblePixels": 47406,
+          "opaquePixels": 19492,
           "groundExclusive": 348,
-          "partialAlphaPixels": 31784,
+          "partialAlphaPixels": 27914,
           "sourceGreenBackgroundPixelsRemoved": 199813,
           "sourceNeutralCorePixelsPreserved": 59451
         },
@@ -452,11 +452,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "a897639c38668d295bf5479dd6c2c4ab79e666a5f9713ace3a144bb644c738cf",
           "preResizeRgbaSha256": "c942daba6697965885668423fb3610157991490832284903bf25c8897d944f93",
-          "rgbaSha256": "6a739748102bec250f5f07342506dfea0814ccab8663a729e09fb63c498d8bce",
-          "visiblePixels": 49071,
-          "opaquePixels": 17489,
+          "rgbaSha256": "dbe050acf10e272add8da552f273af2efa1393e7cee1076f3b46ba2b2ce7c662",
+          "visiblePixels": 49220,
+          "opaquePixels": 17632,
           "groundExclusive": 347,
-          "partialAlphaPixels": 31582,
+          "partialAlphaPixels": 31588,
           "sourceGreenBackgroundPixelsRemoved": 199685,
           "sourceNeutralCorePixelsPreserved": 59449
         },
@@ -480,11 +480,11 @@
           "scale": 0.830078125,
           "cropRgbSha256": "7e7ef9544c4dc52ac143b01fa62fcb4c2c7e9c7a6f36f80ff4ff1a299d25d04d",
           "preResizeRgbaSha256": "a632a1fe932f6468be5e59b0bd139d797d730a667b5ec379303b323feb6509a6",
-          "rgbaSha256": "8616a3d7527e414525ad23e6e076e4d6ef193e33e0a19307f76652d1ef958256",
-          "visiblePixels": 50293,
-          "opaquePixels": 17008,
+          "rgbaSha256": "e178467558513e990937fde86a679f27e1eee0ef45af37acbe0ca42a7e31fb9d",
+          "visiblePixels": 50445,
+          "opaquePixels": 17063,
           "groundExclusive": 348,
-          "partialAlphaPixels": 33285,
+          "partialAlphaPixels": 33382,
           "sourceGreenBackgroundPixelsRemoved": 196010,
           "sourceNeutralCorePixelsPreserved": 62957
         }
@@ -509,10 +509,10 @@
   "uniformResampledSourceRgbaVerified": true,
   "onyankoponWalkingPoses": 24,
   "onyankoponPaintedArtworkHashVerified": true,
-  "visiblePixels": 809380,
+  "visiblePixels": 808030,
   "greenBackgroundPixelsRemoved": 3106669,
   "neutralCorePixelsPreserved": 1042432,
-  "partialAlphaPixels": 302292,
+  "partialAlphaPixels": 299089,
   "paddingPixels": 2048,
   "discardedBackgroundPixels": 102400,
   "reusedBackgroundPixels": 124928,
@@ -524,10 +524,10 @@
   "cellSize": 425,
   "alphaEstimated": true,
   "alphaGroundTruthAvailable": false,
-  "embeddedAssetBytesVerified": 8512016,
+  "embeddedAssetBytesVerified": 8517007,
   "runtimeWalkPremultipliedPixelsChecked": 2890000,
-  "exeBytes": 8540160,
-  "exeSha256": "cd1be6c5ec7cd2197f9626940b799d5901a14b36b5060ba6951a15cf509ff35a",
+  "exeBytes": 8545280,
+  "exeSha256": "e1d93783828deea35ec9bef731c3cc3fed78e19cf05a34de156c23985575f39f",
   "normalCycleMs": 1200,
   "cycleMs": {
     "slow": 2400,
@@ -548,8 +548,8 @@
   },
   "versionInformation": {
     "result": "PASS",
-    "productVersion": "1.9.8",
-    "fileVersion": "1.9.8.0",
+    "productVersion": "1.9.10",
+    "fileVersion": "1.9.10.0",
     "resourceLanguage": "Japanese/Unicode",
     "resourceRvaValid": true,
     "current44ImageBundleEmbedded": true,
@@ -562,24 +562,53 @@
     "displaySize": 224,
     "speed": "normal",
     "cycleMs": 1200,
-    "raisedForepawAndElbowReviewed": true,
+    "yuriAndOnyankoponHindPushOffReviewed": true,
+    "groundContactReviewed": true,
     "multipleLoopsReviewed": true
   },
   "windowsSmoke": {
     "result": "PASS",
     "mode": "normal",
     "exe": "mknkDesktopCats.exe",
-    "samplesAfterInitialPlacement": 106,
-    "startX": 447,
-    "endX": 132,
+    "samplesAfterInitialPlacement": 87,
+    "startX": 442,
+    "endX": 137,
     "fixedY": 290,
     "width": 224
   },
   "onyankoponForelegs": {
-    "elbowFlexionMaxDegrees": 44.760959284146686,
+    "elbowFlexionMaxDegrees": 37.31594529428856,
     "maximumBendRegressionTested": true,
     "forelegWidthRegressionTested": true,
-    "flatSoleDriftMaxPxAt425": 0.4,
+    "flatSoleDriftMaxPxAt425": 0.9,
     "poses": 24
+  },
+  "onyankoponBodyMotion": {
+    "shoulderTravelPxAt224": 4.216470588235294,
+    "maximumShoulderStepPxAt425": 2,
+    "loopBoundaryShoulderStepPxAt425": 2,
+    "shoulderHipAndHeadMotionRecorded": true,
+    "torsoTravelRemovedFromBellyDepthCheck": true,
+    "bodyMotionAndLoopRegressionTested": true
+  },
+  "onyankoponHindPushOff": {
+    "visualReference": "Yuri F08, F01, F02",
+    "legOrder": [
+      "far hind",
+      "near hind"
+    ],
+    "toeOffReachBehindHipPxAt425": [
+      82.95833333333334,
+      66.95833333333334
+    ],
+    "v199ToeOffReachBehindHipPxAt425": [
+      70.0046875,
+      54.0046875
+    ],
+    "additionalToeOffReachPxAt224": [
+      6.827333333333337,
+      6.827333333333337
+    ],
+    "toeOffExtensionRegressionTested": true
   }
 }
